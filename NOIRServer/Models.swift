@@ -76,22 +76,14 @@ enum GameType: String, CaseIterable, Identifiable, Codable {
     
     var officialImageURL: String {
         switch self {
-        case .arkAscended:
-            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2399830/header.jpg"
-        case .minecraft:
-            return "https://www.minecraft.net/content/dam/games/minecraft/key-art/Vanilla-PMP_Collection-Carousel-0_Buzzy-Bees_1280x768.jpg"
-        case .rust:
-            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/252490/header.jpg"
-        case .palworld:
-            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1623730/header.jpg"
-        case .valheim:
-            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/892970/header.jpg"
-        case .cs2:
-            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/header.jpg"
-        case .fivem:
-            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/271590/header.jpg"
-        case .terraria:
-            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/105600/header.jpg"
+        case .arkAscended: return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2399830/header.jpg"
+        case .minecraft: return "https://www.minecraft.net/content/dam/games/minecraft/key-art/Vanilla-PMP_Collection-Carousel-0_Buzzy-Bees_1280x768.jpg"
+        case .rust: return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/252490/header.jpg"
+        case .palworld: return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1623730/header.jpg"
+        case .valheim: return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/892970/header.jpg"
+        case .cs2: return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/header.jpg"
+        case .fivem: return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/271590/header.jpg"
+        case .terraria: return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/105600/header.jpg"
         }
     }
     
@@ -132,6 +124,7 @@ enum GameType: String, CaseIterable, Identifiable, Codable {
 }
 
 struct FullServerConfig: Codable, Equatable {
+    // 1. إعدادات عامة ومنصات
     var maxPlayers: Int = 20
     var crossplayEnabled: Bool = true
     var pvpEnabled: Bool = true
@@ -139,140 +132,175 @@ struct FullServerConfig: Codable, Equatable {
     var adminPassword: String = "noir123"
     var motdMessage: String = "مرحباً بكم في سيرفر NOIR!"
     var mapName: String = "TheIsland_WP"
+    var autoSaveMinutes: Int = 15
     
-    // ARK
+    // 2. كافة إعدادات ARK: Survival Ascended
     var harvestMultiplier: Double = 5.0
+    var harvestHealthMultiplier: Double = 2.0
+    var resourceRespawnSpeed: Double = 2.0
     var tamingSpeed: Double = 10.0
+    var passiveTameInterval: Double = 1.0
     var xpMultiplier: Double = 3.0
+    var killXPMultiplier: Double = 3.0
+    var harvestXPMultiplier: Double = 3.0
+    var craftXPMultiplier: Double = 3.0
     var lootQuality: Double = 2.0
+    var fishingLootQuality: Double = 2.0
     var stackSizeMultiplier: Double = 5.0
+    var cropGrowthSpeed: Double = 3.0
+    var fuelConsumptionInterval: Double = 2.0
+    
+    // التفريخ والتربية (ARK Breeding)
     var eggHatchSpeed: Double = 15.0
     var babyMatureSpeed: Double = 20.0
+    var matingInterval: Double = 0.2
+    var matingSpeed: Double = 2.0
+    var babyFoodConsumption: Double = 0.5
     var babyImprintMultiplier: Double = 2.0
-    var playerWeight: Double = 5.0
+    var babyCuddleInterval: Double = 0.2
+    var anyoneCanImprint: Bool = true
+    
+    // إحصائيات اللاعب (ARK Player Stats)
     var playerHealth: Double = 2.0
     var playerStamina: Double = 3.0
+    var playerOxygen: Double = 3.0
+    var playerFood: Double = 2.0
+    var playerWater: Double = 2.0
+    var playerWeight: Double = 5.0
+    var playerDamage: Double = 1.5
     var playerSpeed: Double = 1.5
+    var playerFortitude: Double = 3.0
+    var playerCraftingSpeed: Double = 2.0
+    
+    // إحصائيات الديناصورات (ARK Dino Stats)
+    var wildDinoMaxLevel: Int = 150
+    var dinoCountMultiplier: Double = 1.0
+    var dinoHealth: Double = 1.5
+    var dinoStamina: Double = 2.0
     var dinoWeight: Double = 5.0
     var dinoDamage: Double = 1.5
-    var wildDinoMaxLevel: Int = 150
+    var dinoSpeed: Double = 1.5
+    var allowRaidDinoFeeding: Bool = true
+    var allowFlyerSpeedLeveling: Bool = true
+    
+    // قوانين العالم والبيئة (ARK World & Rules)
     var dayTimeSpeed: Double = 1.0
     var nightTimeSpeed: Double = 2.0
+    var playerFoodDrain: Double = 0.5
+    var playerWaterDrain: Double = 0.5
+    var playerStaminaDrain: Double = 0.5
+    var playerHealthRecovery: Double = 2.0
+    var maxTribePlayers: Int = 10
+    var maxStructuresInRange: Int = 10500
+    var platformStructureMultiplier: Double = 2.0
     var allowCaveFlyers: Bool = true
+    var allowCaveBuildingPvE: Bool = true
     var showMapPlayerLocation: Bool = true
     var allowThirdPerson: Bool = true
+    var enableCrosshair: Bool = true
+    var showFloatingDamage: Bool = true
     var disableStructureDecay: Bool = true
     var allowBattlEye: Bool = true
+    var enableOfflineRaidProtection: Bool = false
     
-    // Minecraft
+    // 3. كافة إعدادات Minecraft
     var mcGameMode: String = "survival"
     var mcDifficulty: String = "normal"
+    var mcLevelType: String = "minecraft:normal"
+    var mcLevelSeed: String = ""
     var mcOnlineMode: Bool = false
     var mcAllowNether: Bool = true
     var mcAllowEnd: Bool = true
     var mcEnableCommandBlock: Bool = true
     var mcViewDistance: Int = 12
+    var mcSimulationDistance: Int = 10
     var mcSpawnProtection: Int = 16
     var mcAllowFlight: Bool = true
+    var mcSpawnMonsters: Bool = true
+    var mcSpawnAnimals: Bool = true
+    var mcSpawnNPCs: Bool = true
+    var mcKeepInventory: Bool = true
+    var mcMobGriefing: Bool = true
+    var mcDoFireTick: Bool = true
+    var mcWhiteList: Bool = false
+    var mcHardcore: Bool = false
     
-    // FiveM
+    // 4. كافة إعدادات FiveM (GTA V)
     var fivemOneSync: String = "on"
     var fivemGameBuild: String = "3258"
     var fivemVoiceChat: Bool = true
     var fivemScriptHook: Bool = false
+    var fivemPureLevel: Int = 0
+    var fivemMaxPing: Int = 250
+    var fivemTxAdminEnabled: Bool = true
     var fivemSteamWebApiKey: String = ""
     var fivemLicenseKey: String = ""
     
-    // Rust
+    // 5. كافة إعدادات Rust
     var rustWorldSize: Int = 3500
     var rustWorldSeed: Int = 133742
     var rustGatherRate: Double = 3.0
+    var rustSmeltingSpeed: Double = 2.0
+    var rustCraftingSpeed: Double = 2.0
+    var rustStackMultiplier: Double = 5.0
     var rustDecayScale: Double = 0.5
+    var rustUpkeepScale: Double = 0.5
     var rustMaxTeamSize: Int = 4
+    var rustRadiation: Bool = true
+    var rustHelicopterEvent: Bool = true
+    var rustAirdropFrequency: Int = 60
     
-    // Palworld / CS2 / Terraria
+    // 6. كافة إعدادات Palworld / CS2 / Terraria / Valheim
     var palCaptureRate: Double = 2.0
     var palSpawnRate: Double = 1.5
+    var palWorkSpeed: Double = 2.0
+    var palStomachDecrease: Double = 0.5
+    var palDropItemMultiplier: Double = 3.0
+    var palDeathPenalty: String = "Item"
+    var palEnableInvader: Bool = true
+    
     var cs2GameMode: String = "Competitive"
     var cs2MaxRounds: Int = 24
+    var cs2FriendlyFire: Bool = true
+    var cs2FreeArmor: Bool = false
+    var cs2StartMoney: Int = 800
+    var cs2BotQuota: Int = 0
+    
     var terrariaWorldSize: String = "Large"
     var terrariaDifficulty: String = "Expert"
+    var terrariaEvilType: String = "Random"
+    var terrariaNPCStream: Int = 60
+    
+    var valheimCombatModifier: String = "Normal"
+    var valheimDeathPenalty: String = "Normal"
+    var valheimResourceRate: Double = 2.0
+    var valheimPortalAllItems: Bool = true
+    var valheimNoBuildCost: Bool = false
     
     var mods: [GameMod] = []
     
     func diffSummary(comparedTo old: FullServerConfig, isArabic: Bool) -> [String] {
         var changes: [String] = []
-        if maxPlayers != old.maxPlayers {
-            changes.append(isArabic ? "الحد الأقصى للاعبين: \(old.maxPlayers) ← \(maxPlayers)" : "Max Players: \(old.maxPlayers) -> \(maxPlayers)")
-        }
-        if crossplayEnabled != old.crossplayEnabled {
-            changes.append(isArabic ? "اللعب المشترك (PC+Console): \(crossplayEnabled ? "مفعل" : "مغلق")" : "Crossplay: \(crossplayEnabled ? "Enabled" : "Disabled")")
-        }
-        if pvpEnabled != old.pvpEnabled {
-            changes.append(isArabic ? "وضع القتال (PvP): \(pvpEnabled ? "مفعل" : "مغلق")" : "PvP: \(pvpEnabled ? "Enabled" : "Disabled")")
-        }
-        if mapName != old.mapName {
-            changes.append(isArabic ? "الخريطة: \(old.mapName) ← \(mapName)" : "Map: \(old.mapName) -> \(mapName)")
-        }
-        if harvestMultiplier != old.harvestMultiplier {
-            changes.append(isArabic ? "مضاعف التجميع: x\(old.harvestMultiplier) ← x\(harvestMultiplier)" : "Harvest: x\(old.harvestMultiplier) -> x\(harvestMultiplier)")
-        }
-        if tamingSpeed != old.tamingSpeed {
-            changes.append(isArabic ? "سرعة الترويض: x\(old.tamingSpeed) ← x\(tamingSpeed)" : "Taming: x\(old.tamingSpeed) -> x\(tamingSpeed)")
-        }
-        if xpMultiplier != old.xpMultiplier {
-            changes.append(isArabic ? "مضاعف الخبرة (XP): x\(old.xpMultiplier) ← x\(xpMultiplier)" : "XP: x\(old.xpMultiplier) -> x\(xpMultiplier)")
-        }
-        if lootQuality != old.lootQuality {
-            changes.append(isArabic ? "جودة اللوت: x\(old.lootQuality) ← x\(lootQuality)" : "Loot: x\(old.lootQuality) -> x\(lootQuality)")
-        }
-        if stackSizeMultiplier != old.stackSizeMultiplier {
-            changes.append(isArabic ? "تكديس الموارد: x\(old.stackSizeMultiplier) ← x\(stackSizeMultiplier)" : "Stack: x\(old.stackSizeMultiplier) -> x\(stackSizeMultiplier)")
-        }
-        if eggHatchSpeed != old.eggHatchSpeed {
-            changes.append(isArabic ? "سرعة فقس البيض: x\(old.eggHatchSpeed) ← x\(eggHatchSpeed)" : "Egg Hatch: x\(old.eggHatchSpeed) -> x\(eggHatchSpeed)")
-        }
-        if babyMatureSpeed != old.babyMatureSpeed {
-            changes.append(isArabic ? "نمو الصغار: x\(old.babyMatureSpeed) ← x\(babyMatureSpeed)" : "Baby Mature: x\(old.babyMatureSpeed) -> x\(babyMatureSpeed)")
-        }
-        if babyImprintMultiplier != old.babyImprintMultiplier {
-            changes.append(isArabic ? "مضاعف البصمة: x\(old.babyImprintMultiplier) ← x\(babyImprintMultiplier)" : "Imprint: x\(old.babyImprintMultiplier) -> x\(babyImprintMultiplier)")
-        }
-        if playerWeight != old.playerWeight {
-            changes.append(isArabic ? "وزن اللاعب: x\(old.playerWeight) ← x\(playerWeight)" : "Player Weight: x\(old.playerWeight) -> x\(playerWeight)")
-        }
-        if dinoWeight != old.dinoWeight {
-            changes.append(isArabic ? "وزن الديناصورات: x\(old.dinoWeight) ← x\(dinoWeight)" : "Dino Weight: x\(old.dinoWeight) -> x\(dinoWeight)")
-        }
-        if dinoDamage != old.dinoDamage {
-            changes.append(isArabic ? "ضرر الديناصورات: x\(old.dinoDamage) ← x\(dinoDamage)" : "Dino Damage: x\(old.dinoDamage) -> x\(dinoDamage)")
-        }
-        if allowCaveFlyers != old.allowCaveFlyers {
-            changes.append(isArabic ? "طيران الكهوف: \(allowCaveFlyers ? "مسموح" : "ممنوع")" : "Cave Flyers: \(allowCaveFlyers ? "Allowed" : "Disabled")")
-        }
-        if showMapPlayerLocation != old.showMapPlayerLocation {
-            changes.append(isArabic ? "موقع اللاعب بالخريطة: \(showMapPlayerLocation ? "ظاهر" : "مخفي")" : "Map Location: \(showMapPlayerLocation ? "Shown" : "Hidden")")
-        }
-        if serverPassword != old.serverPassword {
-            changes.append(isArabic ? "تم تغيير كلمة مرور السيرفر" : "Server password updated")
-        }
-        if motdMessage != old.motdMessage {
-            changes.append(isArabic ? "تم تحديث رسالة الترحيب (MOTD)" : "MOTD updated")
-        }
-        if mcGameMode != old.mcGameMode {
-            changes.append(isArabic ? "وضع ماينكرافت: \(mcGameMode)" : "MC Gamemode: \(mcGameMode)")
-        }
-        if mcDifficulty != old.mcDifficulty {
-            changes.append(isArabic ? "صعوبة ماينكرافت: \(mcDifficulty)" : "MC Difficulty: \(mcDifficulty)")
-        }
-        if fivemGameBuild != old.fivemGameBuild {
-            changes.append(isArabic ? "إصدار FiveM: \(fivemGameBuild)" : "FiveM Build: \(fivemGameBuild)")
-        }
-        if rustGatherRate != old.rustGatherRate {
-            changes.append(isArabic ? "موارد Rust: x\(rustGatherRate)" : "Rust Gather: x\(rustGatherRate)")
-        }
-        if mods != old.mods {
-            changes.append(isArabic ? "تحديث قائمة المودات (\(mods.count) مود)" : "Mods list updated (\(mods.count))")
+        if maxPlayers != old.maxPlayers { changes.append(isArabic ? "الحد الأقصى للاعبين: \(old.maxPlayers) ← \(maxPlayers)" : "Max Players: \(old.maxPlayers) -> \(maxPlayers)") }
+        if crossplayEnabled != old.crossplayEnabled { changes.append(isArabic ? "اللعب المشترك: \(crossplayEnabled ? "مفعل" : "مغلق")" : "Crossplay: \(crossplayEnabled)") }
+        if pvpEnabled != old.pvpEnabled { changes.append(isArabic ? "نظام PvP: \(pvpEnabled ? "مفعل" : "مغلق")" : "PvP: \(pvpEnabled)") }
+        if mapName != old.mapName { changes.append(isArabic ? "الخريطة: \(old.mapName) ← \(mapName)" : "Map: \(mapName)") }
+        if harvestMultiplier != old.harvestMultiplier { changes.append(isArabic ? "مضاعف التجميع: x\(old.harvestMultiplier) ← x\(harvestMultiplier)" : "Harvest: x\(harvestMultiplier)") }
+        if tamingSpeed != old.tamingSpeed { changes.append(isArabic ? "سرعة الترويض: x\(old.tamingSpeed) ← x\(tamingSpeed)" : "Taming: x\(tamingSpeed)") }
+        if xpMultiplier != old.xpMultiplier { changes.append(isArabic ? "مضاعف الخبرة: x\(old.xpMultiplier) ← x\(xpMultiplier)" : "XP: x\(xpMultiplier)") }
+        if eggHatchSpeed != old.eggHatchSpeed { changes.append(isArabic ? "سرعة فقس البيض: x\(eggHatchSpeed)" : "Egg Hatch: x\(eggHatchSpeed)") }
+        if babyMatureSpeed != old.babyMatureSpeed { changes.append(isArabic ? "نمو الصغار: x\(babyMatureSpeed)" : "Baby Mature: x\(babyMatureSpeed)") }
+        if playerWeight != old.playerWeight { changes.append(isArabic ? "وزن اللاعب: x\(playerWeight)" : "Player Weight: x\(playerWeight)") }
+        if dinoWeight != old.dinoWeight { changes.append(isArabic ? "وزن الديناصورات: x\(dinoWeight)" : "Dino Weight: x\(dinoWeight)") }
+        if mcGameMode != old.mcGameMode { changes.append(isArabic ? "وضع ماينكرافت: \(mcGameMode)" : "MC Gamemode: \(mcGameMode)") }
+        if mcDifficulty != old.mcDifficulty { changes.append(isArabic ? "صعوبة ماينكرافت: \(mcDifficulty)" : "MC Difficulty: \(mcDifficulty)") }
+        if fivemGameBuild != old.fivemGameBuild { changes.append(isArabic ? "إصدار FiveM: \(fivemGameBuild)" : "FiveM Build: \(fivemGameBuild)") }
+        if rustGatherRate != old.rustGatherRate { changes.append(isArabic ? "موارد Rust: x\(rustGatherRate)" : "Rust Gather: x\(rustGatherRate)") }
+        if palCaptureRate != old.palCaptureRate { changes.append(isArabic ? "صيد Palworld: x\(palCaptureRate)" : "Pal Capture: x\(palCaptureRate)") }
+        if mods != old.mods { changes.append(isArabic ? "تحديث المودات (\(mods.count) مود)" : "Mods updated (\(mods.count))") }
+        
+        if changes.isEmpty && self != old {
+            changes.append(isArabic ? "تعديل إعدادات متقدمة في السيرفر" : "Updated advanced server settings")
         }
         return changes
     }
