@@ -21,15 +21,23 @@ jobs:
           python3 - << 'EOF'
           from PIL import Image, ImageDraw
           size = 1024
-          img = Image.new("RGB", (size, size), (13, 13, 18))
+          img = Image.new("RGB", (size, size), (10, 15, 28))
           draw = ImageDraw.Draw(img)
-          gold = (242, 184, 64)
-          draw.rounded_rectangle([54, 54, size-54, size-54], radius=170, outline=gold, width=14)
+          # تدرج لوني عصري للإطار والشعار (Cyan & Violet)
+          for i in range(size):
+              r = int(10 + (25 * i / size))
+              g = int(15 + (20 * i / size))
+              b = int(30 + (45 * i / size))
+              draw.line([(0, i), (size, i)], fill=(r, g, b))
+          cyan = (0, 212, 255)
+          violet = (139, 92, 246)
+          draw.rounded_rectangle([48, 48, size-48, size-48], radius=180, outline=violet, width=10)
+          draw.rounded_rectangle([68, 68, size-68, size-68], radius=165, outline=cyan, width=14)
           w = 95
           left, right, top, bottom = 290, 734, 270, 754
-          draw.rectangle([left, top, left+w, bottom], fill=gold)
-          draw.rectangle([right-w, top, right, bottom], fill=gold)
-          draw.polygon([(left, top), (left+w, top), (right, bottom), (right-w, bottom)], fill=gold)
+          draw.rectangle([left, top, left+w, bottom], fill=cyan)
+          draw.rectangle([right-w, top, right, bottom], fill=cyan)
+          draw.polygon([(left, top), (left+w, top), (right, bottom), (right-w, bottom)], fill=(255, 255, 255))
           img.save("NOIRServer/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
           EOF
 
