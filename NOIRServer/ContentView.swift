@@ -72,10 +72,8 @@ struct HomeDashboardTab: View {
                 
                 ScrollView {
                     VStack(spacing: 20) {
-                        // بطاقة الترحيب والموارد السحابية بتدرج عصري
                         cloudHeroCard
                         
-                        // اختصارات سريعة
                         HStack(spacing: 12) {
                             QuickActionTile(
                                 title: store.isArabic ? "سيرفراتي (\(store.servers.count))" : "My Servers (\(store.servers.count))",
@@ -99,7 +97,7 @@ struct HomeDashboardTab: View {
                             }
                         }
                         
-                        // قسم التعديلات الأخيرة (Recent Activity Log)
+                        // قسم التعديلات الأخيرة
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Label(store.isArabic ? "التعديلات الأخيرة" : "Recent Changes", systemImage: "clock.arrow.circlepath")
@@ -241,7 +239,6 @@ struct ServersListTab: View {
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        // القسم العلوي القابل للسحب يميناً ويساراً (إنشاء سيرفر جديد)
                         if store.isOwner {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
@@ -257,7 +254,6 @@ struct ServersListTab: View {
                                 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
-                                        // بطاقة إنشاء سيرفر مخصص
                                         Button {
                                             preselectedGame = .arkAscended
                                             showNewServerSheet = true
@@ -275,7 +271,6 @@ struct ServersListTab: View {
                                             .clipShape(RoundedRectangle(cornerRadius: 16))
                                         }
                                         
-                                        // بطاقات الألعاب الجاهزة بأيقوناتها وألوانها
                                         ForEach(GameType.allCases) { game in
                                             Button {
                                                 preselectedGame = game
@@ -288,7 +283,7 @@ struct ServersListTab: View {
                                                             .foregroundColor(.white)
                                                         Spacer()
                                                         Text(game.shortBadge)
-                                                            .font(.caption2.black())
+                                                            .font(.caption2.weight(.black))
                                                             .padding(.horizontal, 6)
                                                             .padding(.vertical, 2)
                                                             .background(Color.black.opacity(0.3))
@@ -316,7 +311,6 @@ struct ServersListTab: View {
                             }
                         }
                         
-                        // قائمة السيرفرات المثبتة بأيقونات ألعابها
                         VStack(alignment: .leading, spacing: 12) {
                             Text(store.isArabic ? "جميع السيرفرات (\(store.servers.count))" : "All Servers (\(store.servers.count))")
                                 .font(.headline)
@@ -347,7 +341,6 @@ struct GameServerCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                // أيقونة اللعبة بتدرج لوني خاص باللعبة (مثل ARK أو Minecraft)
                 ZStack {
                     RoundedRectangle(cornerRadius: 14)
                         .fill(LinearGradient(colors: server.game.themeColors, startPoint: .topLeading, endPoint: .bottomTrailing))
