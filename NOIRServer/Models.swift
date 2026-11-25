@@ -66,11 +66,11 @@ enum GameType: String, CaseIterable, Identifiable, Codable {
 }
 
 struct NitradoStyleConfig: Codable {
-    var primaryRate: Double = 5.0       // التجميع (ARK/Rust) أو الصعوبة (MC)
-    var secondaryRate: Double = 10.0    // الترويض (ARK) أو سرعة الصيد (Palworld)
-    var xpMultiplier: Double = 3.0      // مضاعف الخبرة XP
-    var thirdRate: Double = 15.0        // نمو الصغار أو سرعة البناء
-    var weightOrSlots: Double = 5.0     // وزن اللاعب أو سعة المخزن
+    var primaryRate: Double = 5.0
+    var secondaryRate: Double = 10.0
+    var xpMultiplier: Double = 3.0
+    var thirdRate: Double = 15.0
+    var weightOrSlots: Double = 5.0
     var maxPlayers: Int = 20
     var pvpEnabled: Bool = true
     var serverPassword: String = ""
