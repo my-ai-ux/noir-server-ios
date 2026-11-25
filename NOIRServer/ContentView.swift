@@ -12,21 +12,18 @@ struct ContentView: View {
         } else {
             ZStack(alignment: .bottom) {
                 TabView(selection: $selectedTab) {
-                    // التبويب 1: الرئيسية + التعديلات الأخيرة
                     HomeDashboardTab(selectedTab: $selectedTab, showNewServerSheet: $showNewServerSheet, preselectedGame: $preselectedGame)
                         .tabItem {
                             Label(store.isArabic ? "الرئيسية" : "Home", systemImage: "house.fill")
                         }
                         .tag(0)
                     
-                    // التبويب 2: سيرفراتي + شريط السحب الأفقي لإنشاء سيرفر
                     ServersListTab(showNewServerSheet: $showNewServerSheet, preselectedGame: $preselectedGame)
                         .tabItem {
                             Label(store.isArabic ? "سيرفراتي" : "Servers", systemImage: "server.rack")
                         }
                         .tag(1)
                     
-                    // التبويب 3: الإعدادات والصلاحيات
                     SettingsTab()
                         .tabItem {
                             Label(store.isArabic ? "الإعدادات" : "Settings", systemImage: "gearshape.2.fill")
@@ -57,7 +54,7 @@ struct ContentView: View {
 }
 
 // ---------------------------------------------------------
-// التبويب الأول: الرئيسية + سجل التعديلات الأخيرة
+// 1. الرئيسية + سجل التعديلات الأخيرة
 // ---------------------------------------------------------
 struct HomeDashboardTab: View {
     @EnvironmentObject var store: ServerStore
@@ -97,7 +94,6 @@ struct HomeDashboardTab: View {
                             }
                         }
                         
-                        // قسم التعديلات الأخيرة
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Label(store.isArabic ? "التعديلات الأخيرة" : "Recent Changes", systemImage: "clock.arrow.circlepath")
@@ -113,40 +109,33 @@ struct HomeDashboardTab: View {
                                     .clipShape(Capsule())
                             }
                             
-                            if store.activityLogs.isEmpty {
-                                Text(store.isArabic ? "لا توجد تعديلات مسجلة بعد" : "No recent changes yet")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                    .padding()
-                            } else {
-                                ForEach(store.activityLogs.prefix(10)) { log in
-                                    HStack(spacing: 12) {
-                                        Image(systemName: iconForCategory(log.category))
-                                            .font(.subheadline)
-                                            .foregroundColor(colorForCategory(log.category))
-                                            .frame(width: 36, height: 36)
-                                            .background(colorForCategory(log.category).opacity(0.15))
-                                            .clipShape(Circle())
-                                        
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            Text(log.actionDescription)
-                                                .font(.caption.bold())
-                                                .foregroundColor(.white)
-                                            HStack {
-                                                Text("\(log.serverName) • \(log.userName)")
-                                                    .font(.caption2)
-                                                    .foregroundColor(.electricCyan)
-                                                Spacer()
-                                                Text(log.timestamp, style: .time)
-                                                    .font(.caption2)
-                                                    .foregroundColor(.gray)
-                                            }
+                            ForEach(store.activityLogs.prefix(10)) { log in
+                                HStack(spacing: 12) {
+                                    Image(systemName: iconForCategory(log.category))
+                                        .font(.subheadline)
+                                        .foregroundColor(colorForCategory(log.category))
+                                        .frame(width: 36, height: 36)
+                                        .background(colorForCategory(log.category).opacity(0.15))
+                                        .clipShape(Circle())
+                                    
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(log.actionDescription)
+                                            .font(.caption.bold())
+                                            .foregroundColor(.white)
+                                        HStack {
+                                            Text("\(log.serverName) • \(log.userName)")
+                                                .font(.caption2)
+                                                .foregroundColor(.electricCyan)
+                                            Spacer()
+                                            Text(log.timestamp, style: .time)
+                                                .font(.caption2)
+                                                .foregroundColor(.gray)
                                         }
                                     }
-                                    .padding(12)
-                                    .background(Color.cardBg)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
                                 }
+                                .padding(12)
+                                .background(Color.cardBg)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
                             }
                         }
                     }
@@ -202,7 +191,6 @@ struct HomeDashboardTab: View {
         .background(LinearGradient(colors: [Color(red: 0.05, green: 0.35, blue: 0.65), Color(red: 0.32, green: 0.15, blue: 0.62)],
                                    startPoint: .topLeading, endPoint: .bottomTrailing))
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .electricCyan.opacity(0.15), radius: 12, y: 6)
     }
     
     func iconForCategory(_ cat: String) -> String {
@@ -225,7 +213,7 @@ struct HomeDashboardTab: View {
 }
 
 // ---------------------------------------------------------
-// التبويب الثاني: سيرفراتي + شريط علوي يُسحب يميناً لإنشاء سيرفر
+// 2. سيرفراتي + شريط علوي بالصور الرسمية للألعاب لإنشاء سيرفر
 // ---------------------------------------------------------
 struct ServersListTab: View {
     @EnvironmentObject var store: ServerStore
@@ -266,43 +254,38 @@ struct ServersListTab: View {
                                                     .font(.caption.bold())
                                                     .foregroundColor(.white)
                                             }
-                                            .frame(width: 115, height: 105)
+                                            .frame(width: 115, height: 115)
                                             .background(LinearGradient(colors: [.electricCyan, .neonViolet], startPoint: .topLeading, endPoint: .bottomTrailing))
                                             .clipShape(RoundedRectangle(cornerRadius: 16))
                                         }
                                         
+                                        // بطاقات الألعاب بالصور الرسمية الأصلية
                                         ForEach(GameType.allCases) { game in
                                             Button {
                                                 preselectedGame = game
                                                 showNewServerSheet = true
                                             } label: {
-                                                VStack(alignment: .leading, spacing: 8) {
-                                                    HStack {
-                                                        Image(systemName: game.icon)
-                                                            .font(.title3)
+                                                ZStack(alignment: .bottomLeading) {
+                                                    GameOfficialImage(urlString: game.officialImageURL, fallbackIcon: game.fallbackIcon)
+                                                        .frame(width: 175, height: 115)
+                                                        .clipped()
+                                                    
+                                                    LinearGradient(colors: [.clear, .black.opacity(0.88)], startPoint: .top, endPoint: .bottom)
+                                                    
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(game.rawValue)
+                                                            .font(.caption.bold())
                                                             .foregroundColor(.white)
-                                                        Spacer()
-                                                        Text(game.shortBadge)
-                                                            .font(.caption2.weight(.black))
-                                                            .padding(.horizontal, 6)
-                                                            .padding(.vertical, 2)
-                                                            .background(Color.black.opacity(0.3))
-                                                            .foregroundColor(.white)
-                                                            .clipShape(Capsule())
+                                                            .lineLimit(1)
+                                                        Text("\(Int(game.recommendedRAM)) GB RAM • +")
+                                                            .font(.caption2.bold())
+                                                            .foregroundColor(.electricCyan)
                                                     }
-                                                    Spacer()
-                                                    Text(game.rawValue)
-                                                        .font(.caption.bold())
-                                                        .foregroundColor(.white)
-                                                        .lineLimit(1)
-                                                    Text("\(Int(game.recommendedRAM)) GB RAM")
-                                                        .font(.caption2)
-                                                        .foregroundColor(.white.opacity(0.8))
+                                                    .padding(10)
                                                 }
-                                                .padding(12)
-                                                .frame(width: 145, height: 105)
-                                                .background(LinearGradient(colors: game.themeColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                .frame(width: 175, height: 115)
                                                 .clipShape(RoundedRectangle(cornerRadius: 16))
+                                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.15), lineWidth: 1))
                                             }
                                         }
                                     }
@@ -339,68 +322,97 @@ struct GameServerCard: View {
     let isArabic: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(LinearGradient(colors: server.game.themeColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 52, height: 52)
-                    VStack(spacing: 2) {
-                        Image(systemName: server.game.icon)
-                            .font(.title3)
+        VStack(alignment: .leading, spacing: 0) {
+            // صورة الغلاف الرسمية للعبة في أعلى البطاقة
+            ZStack(alignment: .bottomLeading) {
+                GameOfficialImage(urlString: server.game.officialImageURL, fallbackIcon: server.game.fallbackIcon)
+                    .frame(height: 110)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                
+                LinearGradient(colors: [.clear, Color.cardBg], startPoint: .top, endPoint: .bottom)
+                
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(server.name)
+                            .font(.headline)
                             .foregroundColor(.white)
-                        Text(server.game.shortBadge)
-                            .font(.system(size: 9, weight: .black))
-                            .foregroundColor(.white)
+                        Text(server.game.rawValue)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
                     }
+                    Spacer()
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(server.status == .running ? Color.emeraldGreen : Color.red)
+                            .frame(width: 8, height: 8)
+                        Text(server.status == .running ? (isArabic ? "شغال" : "Online") : (isArabic ? "متوقف" : "Offline"))
+                            .font(.caption.bold())
+                            .foregroundColor(server.status == .running ? .emeraldGreen : .red)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.black.opacity(0.65))
+                    .clipShape(Capsule())
                 }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(server.name)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Text(server.game.rawValue)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                
-                Spacer()
-                
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(server.status == .running ? Color.emeraldGreen : Color.red)
-                        .frame(width: 8, height: 8)
-                    Text(server.status == .running ? (isArabic ? "شغال" : "Online") : (isArabic ? "متوقف" : "Offline"))
+                .padding(.horizontal, 14)
+                .padding(.bottom, 8)
+            }
+            
+            VStack(spacing: 8) {
+                Divider().background(Color.white.opacity(0.08))
+                HStack {
+                    Label("\(server.ipAddress):\(server.port)", systemImage: "network")
+                        .font(.caption.monospaced())
+                        .foregroundColor(.electricCyan)
+                    Spacer()
+                    if server.config.crossplayEnabled {
+                        Text("PC+Console")
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.neonViolet.opacity(0.25))
+                            .foregroundColor(.white)
+                            .clipShape(Capsule())
+                    }
+                    Text("\(server.playersOnline)/\(server.config.maxPlayers) 👤")
                         .font(.caption.bold())
-                        .foregroundColor(server.status == .running ? .emeraldGreen : .red)
+                        .foregroundColor(.white)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.white.opacity(0.06))
-                .clipShape(Capsule())
             }
-            
-            Divider().background(Color.white.opacity(0.08))
-            
-            HStack {
-                Label("\(server.ipAddress):\(server.port)", systemImage: "network")
-                    .font(.caption.monospaced())
-                    .foregroundColor(.electricCyan)
-                Spacer()
-                Text("RAM: \(String(format: "%.1f", server.ramUsedGB))/\(Int(server.ramTotalGB))GB")
-                    .font(.caption.bold())
-                    .foregroundColor(.white.opacity(0.85))
-            }
+            .padding(14)
         }
-        .padding()
         .background(Color.cardBg)
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(server.game.themeColors.first?.opacity(0.35) ?? Color.clear, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.white.opacity(0.1), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }
 
+struct GameOfficialImage: View {
+    let urlString: String
+    let fallbackIcon: String
+    
+    var body: some View {
+        AsyncImage(url: URL(string: urlString)) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .scaledToFill()
+            default:
+                ZStack {
+                    Color(red: 0.12, green: 0.16, blue: 0.25)
+                    Image(systemName: fallbackIcon)
+                        .font(.largeTitle)
+                        .foregroundColor(.electricCyan.opacity(0.6))
+                }
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------
-// التبويب الثالث: الإعدادات، الصلاحيات، واللغة
+// 3. الإعدادات والصلاحيات
 // ---------------------------------------------------------
 struct SettingsTab: View {
     @EnvironmentObject var store: ServerStore
@@ -568,6 +580,8 @@ struct NewServerSheet: View {
     @State var selectedGame: GameType
     @State private var name = ""
     @State private var ramGB: Double = 16
+    @State private var maxPlayers: Int = 20
+    @State private var crossplay: Bool = true
     
     var body: some View {
         NavigationStack {
@@ -583,6 +597,11 @@ struct NewServerSheet: View {
                         ramGB = newGame.recommendedRAM
                     }
                     
+                    Stepper("\(store.isArabic ? "الحد الأقصى للاعبين:" : "Max Players:") \(maxPlayers)", value: $maxPlayers, in: 2...200, step: 2)
+                    
+                    Toggle(store.isArabic ? "اللعب المشترك (PC + Console / الجوال)" : "Crossplay (PC + Console)", isOn: $crossplay)
+                        .tint(.electricCyan)
+                    
                     VStack(alignment: .leading) {
                         Text("\(store.isArabic ? "الرام المخصص:" : "Allocated RAM:") \(Int(ramGB)) GB")
                         Slider(value: $ramGB, in: 2...24, step: 2)
@@ -596,7 +615,7 @@ struct NewServerSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(store.isArabic ? "إنشاء وحفظ" : "Create") {
                         let finalName = name.isEmpty ? "NOIR \(selectedGame.shortBadge)" : name
-                        store.createNewServer(name: finalName, game: selectedGame, ramGB: ramGB)
+                        store.createNewServer(name: finalName, game: selectedGame, ramGB: ramGB, maxPlayers: maxPlayers, crossplay: crossplay)
                         dismiss()
                     }
                 }
