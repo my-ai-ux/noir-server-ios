@@ -56,7 +56,6 @@ enum GameType: String, CaseIterable, Identifiable, Codable {
         }
     }
     
-    // روابط الصور الرسمية الأصلية للألعاب
     var officialImageURL: String {
         switch self {
         case .arkAscended:
@@ -114,18 +113,16 @@ enum GameType: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-struct FullServerConfig: Codable {
-    // --- إعدادات مشتركة لجميع السيرفرات ---
+struct FullServerConfig: Codable, Equatable {
     var maxPlayers: Int = 20
-    var crossplayEnabled: Bool = true        // اللعب المشترك (PC + Console / Bedrock)
+    var crossplayEnabled: Bool = true
     var pvpEnabled: Bool = true
     var serverPassword: String = ""
     var adminPassword: String = "noir123"
     var motdMessage: String = "مرحباً بكم في سيرفر NOIR!"
-    var autoSaveMinutes: Int = 15
     var mapName: String = "TheIsland_WP"
     
-    // --- إعدادات ARK: Survival Ascended ---
+    // ARK
     var harvestMultiplier: Double = 5.0
     var tamingSpeed: Double = 10.0
     var xpMultiplier: Double = 3.0
@@ -149,47 +146,122 @@ struct FullServerConfig: Codable {
     var disableStructureDecay: Bool = true
     var allowBattlEye: Bool = true
     
-    // --- إعدادات Minecraft ---
-    var mcGameMode: String = "survival"      // survival, creative, adventure, spectator
-    var mcDifficulty: String = "normal"      // peaceful, easy, normal, hard
-    var mcOnlineMode: Bool = false           // false = يسمح بالمكركة والأصلية
+    // Minecraft
+    var mcGameMode: String = "survival"
+    var mcDifficulty: String = "normal"
+    var mcOnlineMode: Bool = false
     var mcAllowNether: Bool = true
     var mcAllowEnd: Bool = true
     var mcEnableCommandBlock: Bool = true
     var mcViewDistance: Int = 12
-    var mcSimulationDistance: Int = 10
     var mcSpawnProtection: Int = 16
     var mcAllowFlight: Bool = true
     
-    // --- إعدادات FiveM (GTA V) ---
-    var fivemOneSync: String = "on"          // on, legacy, off
-    var fivemGameBuild: String = "3258"      // 3258, 3095, 2944, 2802
+    // FiveM
+    var fivemOneSync: String = "on"
+    var fivemGameBuild: String = "3258"
     var fivemVoiceChat: Bool = true
     var fivemScriptHook: Bool = false
     var fivemSteamWebApiKey: String = ""
     var fivemLicenseKey: String = ""
     
-    // --- إعدادات Rust ---
+    // Rust
     var rustWorldSize: Int = 3500
     var rustWorldSeed: Int = 133742
     var rustGatherRate: Double = 3.0
     var rustDecayScale: Double = 0.5
     var rustMaxTeamSize: Int = 4
-    var rustWipeSchedule: String = "Weekly"
     
-    // --- إعدادات Palworld / Valheim / CS2 / Terraria ---
+    // Palworld / CS2 / Terraria
     var palCaptureRate: Double = 2.0
     var palSpawnRate: Double = 1.5
-    var palDeathPenalty: String = "Item"     // None, Item, ItemAndEquipment, All
-    var cs2GameMode: String = "Competitive"  // Competitive, Premier, Deathmatch, Casual
+    var cs2GameMode: String = "Competitive"
     var cs2MaxRounds: Int = 24
-    var terrariaWorldSize: String = "Large"  // Small, Medium, Large
-    var terrariaDifficulty: String = "Expert"// Classic, Expert, Master, Journey
+    var terrariaWorldSize: String = "Large"
+    var terrariaDifficulty: String = "Expert"
     
     var mods: [GameMod] = []
+    
+    // مقارنة التعديلات لإظهارها قبل الحفظ
+    func diffSummary(comparedTo old: FullServerConfig, isArabic: Bool) -> [String] {
+        var changes: [String] = []
+        if maxPlayers != old.maxPlayers {
+            changes.append(isArabic ? "الحد الأقصى للاعبين: \(old.maxPlayers) ← \(maxPlayers)" : "Max Players: \(old.maxPlayers) → \(maxPlayers)")
+        }
+        if crossplayEnabled != old.crossplayEnabled {
+            changes.append(isArabic ? "اللعب المشترك (PC+Console): \(crossplayEnabled ? "مفعل" : "مغلق")" : "Crossplay: \(crossplayEnabled)")
+        }
+        if pvpEnabled != old.pvpEnabled {
+            changes.append(isArabic ? "وضع القتال (PvP): \(pvpEnabled ? "مفعل" : "مغلق")" : "PvP: \(pvpEnabled)")
+        }
+        if mapName != old.mapName {
+            changes.append(isArabic ? "الخريطة: \(old.mapName) ← \(mapName)" : "Map: \(old.mapName) → \(mapName)")
+        }
+        if harvestMultiplier != old.harvestMultiplier {
+            changes.append(isArabic ? "مضاعف التجميع: x\(old.harvestMultiplier) ← x\(harvestMultiplier)" : "Harvest: x\(old.harvestMultiplier) → x\(harvestMultiplier)")
+        }
+        if tamingSpeed != old.tamingSpeed {
+            changes.append(isArabic ? "سرعة الترويض: x\(old.tamingSpeed) ← x\(tamingSpeed)" : "Taming: x\(old.tamingSpeed) → x\(tamingSpeed)")
+        }
+        if xpMultiplier != old.xpMultiplier {
+            changes.append(isArabic ? "مضاعف الخبرة (XP): x\(old.xpMultiplier) ← x\(xpMultiplier)" : "XP: x\(old.xpMultiplier) → x\(xpMultiplier)")
+        }
+        if lootQuality != old.lootQuality {
+            changes.append(isArabic ? "جودة اللوت: x\(old.lootQuality) ← x\(lootQuality)" : "Loot: x\(old.lootQuality) → x\(lootQuality)")
+        }
+        if stackSizeMultiplier != old.stackSizeMultiplier {
+            changes.append(isArabic ? "تكديس الموارد: x\(old.stackSizeMultiplier) ← x\(stackSizeMultiplier)" : "Stack: x\(old.stackSizeMultiplier) → x\(stackSizeMultiplier)")
+        }
+        if eggHatchSpeed != old.eggHatchSpeed {
+            changes.append(isArabic ? "سرعة فقس البيض: x\(old.eggHatchSpeed) ← x\(eggHatchSpeed)")
+        }
+        if babyMatureSpeed != old.babyMatureSpeed {
+            changes.append(isArabic ? "نمو الصغار: x\(old.babyMatureSpeed) ← x\(babyMatureSpeed)")
+        }
+        if babyImprintMultiplier != old.babyImprintMultiplier {
+            changes.append(isArabic ? "مضاعف البصمة: x\(old.babyImprintMultiplier) ← x\(babyImprintMultiplier)")
+        }
+        if playerWeight != old.playerWeight {
+            changes.append(isArabic ? "وزن اللاعب: x\(old.playerWeight) ← x\(playerWeight)")
+        }
+        if dinoWeight != old.dinoWeight {
+            changes.append(isArabic ? "وزن الديناصورات: x\(old.dinoWeight) ← x\(dinoWeight)")
+        }
+        if dinoDamage != old.dinoDamage {
+            changes.append(isArabic ? "ضرر الديناصورات: x\(old.dinoDamage) ← x\(dinoDamage)")
+        }
+        if allowCaveFlyers != old.allowCaveFlyers {
+            changes.append(isArabic ? "طيران الكهوف: \(allowCaveFlyers ? "مسموح" : "ممنوع")")
+        }
+        if showMapPlayerLocation != old.showMapPlayerLocation {
+            changes.append(isArabic ? "موقع اللاعب بالخريطة: \(showMapPlayerLocation ? "ظاهر" : "مخفي")")
+        }
+        if serverPassword != old.serverPassword {
+            changes.append(isArabic ? "تم تغيير كلمة مرور السيرفر" : "Server password updated")
+        }
+        if motdMessage != old.motdMessage {
+            changes.append(isArabic ? "تم تحديث رسالة الترحيب (MOTD)" : "MOTD updated")
+        }
+        if mcGameMode != old.mcGameMode {
+            changes.append(isArabic ? "وضع ماينكرافت: \(mcGameMode)" : "MC Gamemode: \(mcGameMode)")
+        }
+        if mcDifficulty != old.mcDifficulty {
+            changes.append(isArabic ? "صعوبة ماينكرافت: \(mcDifficulty)" : "MC Difficulty: \(mcDifficulty)")
+        }
+        if fivemGameBuild != old.fivemGameBuild {
+            changes.append(isArabic ? "إصدار FiveM: \(fivemGameBuild)" : "FiveM Build: \(fivemGameBuild)")
+        }
+        if rustGatherRate != old.rustGatherRate {
+            changes.append(isArabic ? "موارد Rust: x\(rustGatherRate)" : "Rust Gather: x\(rustGatherRate)")
+        }
+        if mods != old.mods {
+            changes.append(isArabic ? "تحديث قائمة المودات (\(mods.count) مود)" : "Mods list updated (\(mods.count))")
+        }
+        return changes
+    }
 }
 
-struct GameMod: Identifiable, Codable {
+struct GameMod: Identifiable, Codable, Equatable {
     var id: String { modId }
     let modId: String
     var name: String
