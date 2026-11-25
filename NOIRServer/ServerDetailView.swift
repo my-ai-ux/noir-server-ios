@@ -66,7 +66,14 @@ struct ServerDetailView: View {
                         .padding(.horizontal)
                         
                         if selectedTab == 0 {
-                            gameSpecificSettingsView(game: server.game)
+                            GameSettingsView(
+                                config: $draftConfig,
+                                game: server.game,
+                                canEdit: store.canEdit,
+                                isArabic: store.isArabic,
+                                pendingCount: pendingChanges.count,
+                                onReviewAndSave: { showReviewSaveSheet = true }
+                            )
                         } else if selectedTab == 1 {
                             modsAndStoreView(game: server.game)
                         } else {
@@ -186,16 +193,12 @@ struct ServerDetailView: View {
         }
     }
     
-    // ---------------------------------------------------------
-    // محرك جلب وترجمة جميع المودات الحية لكل لعبة (Modrinth + CurseForge + Catalog)
-    // ---------------------------------------------------------
     func loadLiveModsForGame(game: GameType) async {
         isFetchingMods = true
         defer { isFetchingMods = false }
         
         var combined: [StoreModItem] = getExpandedBuiltInCatalog(for: game)
         
-        // جلب آلاف المودات الحقيقية من Modrinth API (لـ Minecraft و Palworld و Valheim)
         let queryTerm: String
         switch game {
         case .minecraft: queryTerm = modSearchText.isEmpty ? "plugin" : modSearchText
@@ -238,7 +241,6 @@ struct ServerDetailView: View {
             }
         }
         
-        // تطبيق البحث والفلتر على القائمة الكاملة
         let filtered = combined.filter { item in
             modSearchText.isEmpty ||
             item.name.localizedCaseInsensitiveContains(modSearchText) ||
@@ -247,9 +249,7 @@ struct ServerDetailView: View {
         }
         
         switch sortOption {
-        case .downloads:
-            liveStoreMods = filtered.sorted { $0.downloadsCount > $1.downloadsCount }
-        case .follows:
+        case .downloads, .follows:
             liveStoreMods = filtered.sorted { $0.downloadsCount > $1.downloadsCount }
         case .updated:
             liveStoreMods = filtered.reversed()
@@ -258,7 +258,6 @@ struct ServerDetailView: View {
         }
     }
     
-    // ترجمة فورية مجانية لأي وصف مود إنجليزي إلى العربية
     func translateToArabic(text: String) async -> String {
         guard !text.isEmpty,
               let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
@@ -272,7 +271,6 @@ struct ServerDetailView: View {
         return translated.isEmpty ? text : translated
     }
     
-    // قاعدة بيانات موسعة بالصور واللقطات وعدد التنزيلات لكل الألعاب
     func getExpandedBuiltInCatalog(for game: GameType) -> [StoreModItem] {
         switch game {
         case .arkAscended:
@@ -457,13 +455,9 @@ struct ServerDetailView: View {
         .padding(.horizontal)
     }
     
-    // ---------------------------------------------------------
-    // متجر المودات الشامل لكل الألعاب + الفلتر + عدد التنزيلات + صور المود
-    // ---------------------------------------------------------
     func modsAndStoreView(game: GameType) -> some View {
         ScrollView {
             VStack(spacing: 16) {
-                // المودات المثبتة
                 VStack(alignment: .leading, spacing: 10) {
                     Text(store.isArabic ? "المودات المثبتة (\(draftConfig.mods.count))" : "Installed Mods (\(draftConfig.mods.count))")
                         .font(.headline)
@@ -503,7 +497,6 @@ struct ServerDetailView: View {
                     }
                 }
                 
-                // إضافة مود يدوي برقم ID
                 if store.canMods {
                     VStack(spacing: 10) {
                         Text(store.isArabic ? "إضافة أي مود برقم المعرّف (Mod ID / Slug)" : "Add Custom Mod by ID")
@@ -545,7 +538,6 @@ struct ServerDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 
-                // متجر المودات الحي لكل الألعاب مع الفلاتر وعدد التنزيلات
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text(store.isArabic ? "متجر مودات \(game.shortBadge)" : "\(game.shortBadge) Mods Store")
@@ -557,7 +549,6 @@ struct ServerDetailView: View {
                         }
                     }
                     
-                    // شريط البحث الحي
                     HStack {
                         TextField(store.isArabic ? "ابحث في جميع المودات..." : "Search all mods...", text: $modSearchText)
                             .padding(10)
@@ -578,7 +569,6 @@ struct ServerDetailView: View {
                         }
                     }
                     
-                    // أزرار الفلترة (الأكثر تنزيلاً، الأحدث، الأعلى تقييماً...)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(ModSortOption.allCases) { option in
@@ -598,7 +588,6 @@ struct ServerDetailView: View {
                         }
                     }
                     
-                    // قائمة المودات مع صورة المود، عدد التنزيلات، والوصف العربي
                     ForEach(liveStoreMods) { item in
                         let alreadyInstalled = draftConfig.mods.contains(where: { $0.modId == item.id })
                         VStack(alignment: .leading, spacing: 10) {
@@ -622,7 +611,6 @@ struct ServerDetailView: View {
                                     }
                                     
                                     HStack(spacing: 6) {
-                                        // شارة عدد التنزيلات
                                         Label("\(item.formattedDownloads)", systemImage: "arrow.down.circle.fill")
                                             .font(.caption2.bold())
                                             .padding(.horizontal, 8)
@@ -662,13 +650,11 @@ struct ServerDetailView: View {
                                 }
                             }
                             
-                            // الوصف بالعربية
                             Text(store.isArabic ? item.arabicDescription : item.englishDescription)
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.85))
                                 .fixedSize(horizontal: false, vertical: true)
                             
-                            // زر عرض صور المود والتفاصيل الكاملة
                             Button {
                                 selectedModDetail = item
                             } label: {
@@ -687,96 +673,6 @@ struct ServerDetailView: View {
                     }
                 }
                 .padding(.bottom, 80)
-            }
-            .padding()
-        }
-    }
-    
-    // بقية أقسام الإعدادات والكونسول (نفس الكود السابق بالكامل)
-    func gameSpecificSettingsView(game: GameType) -> some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                if !store.canEdit {
-                    Text(store.isArabic ? "🔒 وضع القراءة فقط: المالك قيّد تعديل الإعدادات لحسابك" : "🔒 Read-only mode")
-                        .font(.caption.bold())
-                        .foregroundColor(.electricCyan)
-                        .padding(10)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.electricCyan.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                
-                Group {
-                    SettingGroupTitle(title: store.isArabic ? "1. الوصول والمنصات واللاعبين" : "1. Access, Platforms & Players")
-                    VStack(spacing: 12) {
-                        Stepper(value: $draftConfig.maxPlayers, in: 2...500, step: 2) {
-                            HStack {
-                                Text(store.isArabic ? "الحد الأقصى للاعبين" : "Max Players").foregroundColor(.white)
-                                Spacer()
-                                Text("\(draftConfig.maxPlayers)").font(.headline.monospaced()).foregroundColor(.electricCyan)
-                            }
-                        }
-                    }
-                    .padding().background(Color.cardBg).clipShape(RoundedRectangle(cornerRadius: 14))
-                    
-                    SettingToggleCard(title: store.isArabic ? "السماح باللعب المشترك (PC + Console / الجوال)" : "Enable Crossplay", isOn: $draftConfig.crossplayEnabled)
-                    SettingToggleCard(title: store.isArabic ? "تفعيل القتال بين اللاعبين (PvP)" : "Enable PvP", isOn: $draftConfig.pvpEnabled)
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(store.isArabic ? "كلمة مرور السيرفر" : "Server Password").font(.caption.bold()).foregroundColor(.gray)
-                        TextField("Password...", text: $draftConfig.serverPassword)
-                            .padding(10).background(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 10))
-                        Text(store.isArabic ? "رسالة الترحيب (MOTD)" : "MOTD").font(.caption.bold()).foregroundColor(.gray)
-                        TextField("MOTD...", text: $draftConfig.motdMessage)
-                            .padding(10).background(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    .padding().background(Color.cardBg).clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .disabled(!store.canEdit)
-                
-                Group {
-                    switch game {
-                    case .arkAscended:
-                        SettingGroupTitle(title: store.isArabic ? "2. معدلات ARK Ascended" : "2. ARK Rates")
-                        CustomRateSlider(title: store.isArabic ? "مضاعف التجميع (Harvest)" : "Harvest", value: $draftConfig.harvestMultiplier, range: 1...100)
-                        CustomRateSlider(title: store.isArabic ? "سرعة الترويض (Taming)" : "Taming", value: $draftConfig.tamingSpeed, range: 1...100)
-                        CustomRateSlider(title: store.isArabic ? "مضاعف الخبرة (XP)" : "XP", value: $draftConfig.xpMultiplier, range: 1...50)
-                        CustomRateSlider(title: store.isArabic ? "سرعة فقس البيض" : "Egg Hatch", value: $draftConfig.eggHatchSpeed, range: 1...100)
-                        CustomRateSlider(title: store.isArabic ? "سرعة نمو الصغار" : "Baby Mature", value: $draftConfig.babyMatureSpeed, range: 1...100)
-                        CustomRateSlider(title: store.isArabic ? "وزن اللاعب" : "Player Weight", value: $draftConfig.playerWeight, range: 1...100)
-                        SettingToggleCard(title: store.isArabic ? "السماح بالطيران داخل الكهوف" : "Allow Cave Flyers", isOn: $draftConfig.allowCaveFlyers)
-                        SettingToggleCard(title: store.isArabic ? "إظهار موقع اللاعب على الخريطة" : "Show Player on Map", isOn: $draftConfig.showMapPlayerLocation)
-                    case .minecraft:
-                        SettingGroupTitle(title: store.isArabic ? "2. إعدادات Minecraft" : "2. Minecraft Settings")
-                        SettingToggleCard(title: store.isArabic ? "السماح بالحسابات المكركة" : "Allow Cracked", isOn: Binding(
-                            get: { !draftConfig.mcOnlineMode },
-                            set: { draftConfig.mcOnlineMode = !$0 }
-                        ))
-                        SettingToggleCard(title: store.isArabic ? "تفعيل بلوكات الأوامر" : "Command Blocks", isOn: $draftConfig.mcEnableCommandBlock)
-                    default:
-                        SettingGroupTitle(title: store.isArabic ? "2. معدلات اللعبة" : "2. Game Rates")
-                        CustomRateSlider(title: store.isArabic ? "مضاعف الموارد" : "Resource Rate", value: $draftConfig.harvestMultiplier, range: 1...20)
-                    }
-                }
-                .disabled(!store.canEdit)
-                
-                if store.canEdit {
-                    Button {
-                        showReviewSaveSheet = true
-                    } label: {
-                        Text(pendingChanges.isEmpty
-                             ? (store.isArabic ? "جميع الإعدادات محفوظة ✓" : "All Settings Saved ✓")
-                             : (store.isArabic ? "مراجعة وحفظ التعديلات (\(pendingChanges.count))" : "Review & Save (\(pendingChanges.count))"))
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(pendingChanges.isEmpty ? AnyShapeStyle(Color.white.opacity(0.1)) : AnyShapeStyle(LinearGradient(colors: [.electricCyan, .neonViolet], startPoint: .leading, endPoint: .trailing)))
-                            .foregroundColor(pendingChanges.isEmpty ? .gray : .white)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                    }
-                    .disabled(pendingChanges.isEmpty)
-                    .padding(.bottom, 75)
-                }
             }
             .padding()
         }
@@ -825,9 +721,6 @@ struct ServerDetailView: View {
     }
 }
 
-// ---------------------------------------------------------
-// نافذة تفاصيل المود بالصور المتعددة والوصف العربي المترجم
-// ---------------------------------------------------------
 struct ModPreviewDetailSheet: View {
     let modItem: StoreModItem
     let isInstalled: Bool
@@ -840,7 +733,6 @@ struct ModPreviewDetailSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    // رأس المود بالأيقونة وعدد التنزيلات
                     HStack(spacing: 14) {
                         GameOfficialImage(urlString: modItem.imageURL, fallbackIcon: "puzzlepiece.fill")
                             .frame(width: 76, height: 76)
@@ -860,7 +752,6 @@ struct ModPreviewDetailSheet: View {
                         }
                     }
                     
-                    // معرض صور المود (Screenshots)
                     Text(isArabic ? "صور من داخل المود" : "Mod Screenshots")
                         .font(.headline)
                     
@@ -874,7 +765,6 @@ struct ModPreviewDetailSheet: View {
                         }
                     }
                     
-                    // وصف المود بالعربية
                     Text(isArabic ? "وصف المود (مترجم بالعربية)" : "Description")
                         .font(.headline)
                     
@@ -974,17 +864,6 @@ struct ReviewChangesSheet: View {
             .navigationTitle(isArabic ? "تأكيد الحفظ" : "Confirm Save")
             .navigationBarTitleDisplayMode(.inline)
         }
-    }
-}
-
-struct SettingGroupTitle: View {
-    let title: String
-    var body: some View {
-        Text(title)
-            .font(.subheadline.bold())
-            .foregroundColor(.electricCyan)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 4)
     }
 }
 
