@@ -21,7 +21,6 @@ struct ServerDetailView: View {
                 Color(red: 0.05, green: 0.05, blue: 0.07).ignoresSafeArea()
                 
                 VStack(spacing: 14) {
-                    // معلومات السيرفر المباشرة وأزرار التحكم
                     serverInfoAndPowerCard(server: server)
                     
                     Picker("", selection: $selectedTab) {
@@ -107,7 +106,6 @@ struct ServerDetailView: View {
         .padding(.horizontal)
     }
     
-    // إعدادات Nitrado تتكيف حسب نوع اللعبة
     func nitradoDynamicConfigView(index: Int, game: GameType) -> some View {
         let labels = getGameRateLabels(game: game, isArabic: store.isArabic)
         return ScrollView {
