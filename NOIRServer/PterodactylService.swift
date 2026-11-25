@@ -3,112 +3,97 @@ import SwiftUI
 
 @MainActor
 class ServerStore: ObservableObject {
-    @Published var isAuthenticated: Bool = false
-    @Published var currentRole: UserRole = .owner
-    @Published var currentUserName: String = "المالك"
+    @Published var isAuthenticated: Bool = UserDefaults.standard.bool(forKey: "isAuthenticated")
+    @Published var currentRole: UserRole = UserRole(rawValue: UserDefaults.standard.string(forKey: "currentRole") ?? "owner") ?? .owner
+    @Published var currentUserName: String = UserDefaults.standard.string(forKey: "currentUserName") ?? "المالك"
     @Published var activePermissions: AccessCode? = nil
     
     @Published var ownerPin: String = UserDefaults.standard.string(forKey: "ownerPin") ?? "0000"
     @Published var friendCodes: [AccessCode] = []
-    
     @Published var servers: [GameServer] = []
+    @Published var activityLogs: [ActivityLogItem] = []
+    
     @Published var isArabic: Bool = true
-    @Published var isDemoMode: Bool = true
+    @Published var isDemoMode: Bool = UserDefaults.standard.object(forKey: "isDemoMode") as? Bool ?? true
     @Published var panelURL: String = UserDefaults.standard.string(forKey: "panelURL") ?? ""
     @Published var apiKey: String = UserDefaults.standard.string(forKey: "apiKey") ?? ""
     @Published var toastMessage: String? = nil
     
-    // متجر مودات ARK: Survival Ascended الجاهزة مع وصف عربي مترجم
+    // مكتبة مودات ARK: Survival Ascended الشاملة بالصور والأيقونات والوصف العربي
     let arkModsCatalog: [StoreModItem] = [
-        StoreModItem(id: "928793", name: "Super Cryo Storage (SCS)", category: "تخزين",
-                     arabicDescription: "كرات تخزين متطورة لحفظ الديناصورات مع إمكانية تفريخ البيض تلقائياً وتوليد الموارد داخل الثلاجة.",
+        StoreModItem(id: "928793", name: "Super Cryo Storage (SCS)", category: "تخزين وتفريخ", iconName: "snowflake.circle.fill",
+                     bannerColors: [.cyan, .blue],
+                     arabicDescription: "كرات تخزين متطورة لحفظ الديناصورات مع ثلاجة تفريخ البيض تلقائياً وتوليد الموارد والأسمدة.",
                      englishDescription: "Advanced cryopods with auto-incubation and passive resource generation."),
-        StoreModItem(id: "929110", name: "Awesome SpyGlass!", category: "أدوات",
-                     arabicDescription: "منظار ذكي يعرض لك نقاط القوة (Stats) للديناصور البري قبل ترويضه، ومستوى الترويض والأكل المطلوب.",
+        StoreModItem(id: "929110", name: "Awesome SpyGlass!", category: "أدوات واستكشاف", iconName: "scope",
+                     bannerColors: [.purple, .indigo],
+                     arabicDescription: "منظار ذكي يعرض لك نقاط القوة (Stats) للديناصور البري قبل ترويضه ونوع الأكل المفضل له.",
                      englishDescription: "Shows wild dino stat points, torpor, and taming food requirements."),
-        StoreModItem(id: "930170", name: "Automated Ark (AA)", category: "أتمتة",
-                     arabicDescription: "نظام ذكي يسحب الموارد تلقائياً من الديناصورات ويوزعها على الصناديق والأفران بدون تعب النقل اليدوي.",
+        StoreModItem(id: "930170", name: "Automated Ark (AA)", category: "أتمتة ومصانع", iconName: "gearshape.2.fill",
+                     bannerColors: [.teal, .green],
+                     arabicDescription: "نظام ذكي يسحب الموارد تلقائياً من الديناصورات ويوزعها على الأفران والصناديق بضغطة زر.",
                      englishDescription: "Automates resource pulling, sorting, and crafting stations."),
-        StoreModItem(id: "928597", name: "Dino Depot", category: "ديناصورات",
+        StoreModItem(id: "928597", name: "Dino Depot", category: "ديناصورات", iconName: "shippingbox.circle.fill",
+                     bannerColors: [.blue, .indigo],
                      arabicDescription: "بديل احترافي للكرايو بود مع محطة تجميع تلقائية لصغار الديناصورات فور ولادتها.",
                      englishDescription: "Dino storage balls with newborn auto-capture terminals."),
-        StoreModItem(id: "929785", name: "TG Stacking Mod 10000-90", category: "موارد",
+        StoreModItem(id: "929785", name: "TG Stacking Mod 10000-90", category: "موارد ووزن", iconName: "square.stack.3d.up.fill",
+                     bannerColors: [.orange, .red],
                      arabicDescription: "يرفع سعة تكديس الموارد (الخشب، الحجر، اللحم) إلى 10,000 حبة ويقلل وزنها بنسبة 90%.",
                      englishDescription: "Increases item stack sizes to 10,000 and reduces weight by 90%."),
-        StoreModItem(id: "932365", name: "Utilities Plus", category: "أدوات",
-                     arabicDescription: "يوفر خطاف (Grappling Hook) ومظلة ومنظار وأدوات تنقل لا نهائية وقابلة لإعادة الاستخدام.",
+        StoreModItem(id: "930494", name: "Cybers Structures (S+)", category: "بناء متطور", iconName: "building.2.fill",
+                     bannerColors: [.cyan, .teal],
+                     arabicDescription: "إضافات بناء مطورة تشمل جدران وأسقف زجاجية ومصاعد وأبواب تفتح تلقائياً ومولدات لاسلكية.",
+                     englishDescription: "Enhanced building pieces, glass structures, and auto-doors."),
+        StoreModItem(id: "932365", name: "Utilities Plus", category: "أدوات بقاء", iconName: "figure.climbing",
+                     bannerColors: [.mint, .teal],
+                     arabicDescription: "يوفر خطاف (Grappling Hook) ومظلة ومنظار وبولا لا نهائية وقابلة لإعادة الاستخدام بدون كسر.",
                      englishDescription: "Reusable grappling hooks, parachutes, bolas, and flares."),
-        StoreModItem(id: "935985", name: "ARK Additions: Brachiosaurus", category: "ديناصورات جديدة",
+        StoreModItem(id: "928621", name: "Death Recovery Mod", category: "استرجاع الأغراض", iconName: "cross.circle.fill",
+                     bannerColors: [.red, .pink],
+                     arabicDescription: "شاهد قبر تبنيه في بيتك يسمح لك باسترجاع كامل أغراضك ودروعك بضغطة زر واحدة بعد الموت.",
+                     englishDescription: "Tombstone that recovers all your dropped inventory upon death."),
+        StoreModItem(id: "936457", name: "Primal Chaos", category: "تحدي وزعماء", iconName: "flame.fill",
+                     bannerColors: [.red, .orange],
+                     arabicDescription: "مود ضخم يضيف ديناصورات خرافية وعناصر نارية وكهربائية وزعماء جدد بمستويات صعوبة أسطورية.",
+                     englishDescription: "Overhaul mod adding elemental, demonic, and boss tier dinos."),
+        StoreModItem(id: "935985", name: "ARK Additions: Brachiosaurus", category: "ديناصورات جديدة", iconName: "lizard.fill",
+                     bannerColors: [.green, .mint],
                      arabicDescription: "يضيف ديناصور البراكيوصور العملاق بقدرات قتالية وتجميع خشب وتوت بكميات هائلة.",
                      englishDescription: "Adds the massive Brachiosaurus creature with unique abilities."),
-        StoreModItem(id: "936457", name: "Primal Chaos", category: "تحدي ومودات كبرى",
-                     arabicDescription: "مود ضخم يضيف ديناصورات خرافية وعناصر نارية وكهربائية وزعماء جدد بمستويات صعوبة عالية.",
-                     englishDescription: "Overhaul mod adding elemental, demonic, and boss tier dinos."),
-        StoreModItem(id: "928621", name: "Death Recovery Mod", category: "بقاء",
-                     arabicDescription: "شاهد قبر يسمح لك باسترجاع كامل أغراضك ودروعك بضغطة زر واحدة بعد الموت.",
-                     englishDescription: "Tombstone that recovers all your dropped inventory upon death."),
-        StoreModItem(id: "930494", name: "Cybers Structures (S+)", category: "بناء",
-                     arabicDescription: "إضافات بناء مطورة تشمل جدران وأسقف زجاجية ومصاعد وأبواب تفتح تلقائياً.",
-                     englishDescription: "Enhanced building pieces, glass structures, and auto-doors.")
+        StoreModItem(id: "933099", name: "Pelayori's Cryo Storage", category: "تخزين", iconName: "cube.fill",
+                     bannerColors: [.indigo, .purple],
+                     arabicDescription: "نظام كرايو خفيف وسريع يدعم التجميع التلقائي للبيض والسماد من الديناصورات المخزنة.",
+                     englishDescription: "Lightweight cryo system with passive egg and fertilizer collection."),
+        StoreModItem(id: "931214", name: "Upgrade Station", category: "تطوير الأسلحة", iconName: "hammer.circle.fill",
+                     bannerColors: [.yellow, .orange],
+                     arabicDescription: "طاولة تطوير تسمح لك بترقية أي سلاح أو درع أو سرج ديناصور من العادي إلى Ascendant.",
+                     englishDescription: "Allows upgrading any weapon, armor, or saddle up to Ascendant quality."),
+        StoreModItem(id: "934881", name: "Shiny! Dinos Ascended", category: "ديناصورات نادرة", iconName: "sparkles",
+                     bannerColors: [.pink, .purple],
+                     arabicDescription: "يضيف ديناصورات ملونة ونادرة (Shiny) بقدرات خاصة ومستويات عالية في أنحاء الخريطة.",
+                     englishDescription: "Spawns rare variant dinos with special colors and abilities across the map."),
+        StoreModItem(id: "937112", name: "Custom Dino Levels", category: "توازن المستويات", iconName: "chart.bar.fill",
+                     bannerColors: [.blue, .cyan],
+                     arabicDescription: "يعدل توزيع مستويات الديناصورات البرية بحيث تظهر ديناصورات بمستويات عالية (130-150) بكثرة.",
+                     englishDescription: "Balances wild dino level spawns so high-level dinos appear more frequently."),
+        StoreModItem(id: "938440", name: "Klinger Additional Boats", category: "سفن وقوارب", iconName: "ferry.fill",
+                     bannerColors: [.teal, .blue],
+                     arabicDescription: "يضيف سفن خشبية وحديدية عملاقة قابلة للبناء عليها للإبحار ونقل الديناصورات.",
+                     englishDescription: "Adds large customizable wooden and metal ships for ocean transport.")
     ]
     
     init() {
-        loadSavedAccessCodes()
-        loadDemoServers()
+        loadAllPersistedData()
     }
     
-    // التحقق من رمز الدخول
-    func login(with code: String) -> Bool {
-        let clean = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        if clean == ownerPin {
-            currentRole = .owner
-            currentUserName = isArabic ? "المالك (صلاحية كاملة)" : "Owner (Full Access)"
-            activePermissions = nil
-            isAuthenticated = true
-            return true
+    // حفظ واسترجاع جميع البيانات من ذاكرة الهاتف
+    private func loadAllPersistedData() {
+        if let data = UserDefaults.standard.data(forKey: "savedActivePermissions"),
+           let decoded = try? JSONDecoder().decode(AccessCode.self, from: data) {
+            activePermissions = decoded
         }
         
-        if let friend = friendCodes.first(where: { $0.code == clean }) {
-            currentRole = .friend
-            currentUserName = friend.friendName
-            activePermissions = friend
-            isAuthenticated = true
-            return true
-        }
-        
-        return false
-    }
-    
-    func logout() {
-        isAuthenticated = false
-        activePermissions = nil
-    }
-    
-    func updateOwnerPin(newPin: String) {
-        guard newPin.count >= 4 else { return }
-        ownerPin = newPin
-        UserDefaults.standard.set(newPin, forKey: "ownerPin")
-        showToast(isArabic ? "تم تحديث رمز المالك بنجاح" : "Owner PIN Updated")
-    }
-    
-    func addFriendCode(_ access: AccessCode) {
-        friendCodes.append(access)
-        saveFriendCodes()
-        showToast(isArabic ? "تم إنشاء رمز دخول لـ \(access.friendName)" : "Code created for \(access.friendName)")
-    }
-    
-    func removeFriendCode(id: String) {
-        friendCodes.removeAll { $0.id == id }
-        saveFriendCodes()
-    }
-    
-    private func saveFriendCodes() {
-        if let encoded = try? JSONEncoder().encode(friendCodes) {
-            UserDefaults.standard.set(encoded, forKey: "friendCodes")
-        }
-    }
-    
-    private func loadSavedAccessCodes() {
         if let data = UserDefaults.standard.data(forKey: "friendCodes"),
            let decoded = try? JSONDecoder().decode([AccessCode].self, from: data) {
             friendCodes = decoded
@@ -118,9 +103,110 @@ class ServerStore: ObservableObject {
                            canPowerControl: true, canEditSettings: true, canManageMods: true, canUseConsole: false)
             ]
         }
+        
+        if let data = UserDefaults.standard.data(forKey: "savedServers"),
+           let decoded = try? JSONDecoder().decode([GameServer].self, from: data), !decoded.isEmpty {
+            servers = decoded
+        } else {
+            loadDefaultServers()
+        }
+        
+        if let data = UserDefaults.standard.data(forKey: "savedActivityLogs"),
+           let decoded = try? JSONDecoder().decode([ActivityLogItem].self, from: data) {
+            activityLogs = decoded
+        } else {
+            logActivity(serverName: "NOIR ARK Ascended x5", action: "تم تهيئة السيرفر وتركيب المودات الأساسية", category: "create")
+        }
     }
     
-    // فحص الصلاحيات
+    func persistServers() {
+        if let encoded = try? JSONEncoder().encode(servers) {
+            UserDefaults.standard.set(encoded, forKey: "savedServers")
+        }
+    }
+    
+    func persistLogs() {
+        if let encoded = try? JSONEncoder().encode(activityLogs) {
+            UserDefaults.standard.set(encoded, forKey: "savedActivityLogs")
+        }
+    }
+    
+    func logActivity(serverName: String, action: String, category: String) {
+        let item = ActivityLogItem(
+            id: UUID().uuidString,
+            userName: currentUserName,
+            serverName: serverName,
+            actionDescription: action,
+            timestamp: Date(),
+            category: category
+        )
+        activityLogs.insert(item, at: 0)
+        if activityLogs.count > 50 { activityLogs.removeLast() }
+        persistLogs()
+    }
+    
+    func login(with code: String) -> Bool {
+        let clean = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean == ownerPin {
+            currentRole = .owner
+            currentUserName = isArabic ? "المالك" : "Owner"
+            activePermissions = nil
+            isAuthenticated = true
+            saveSession()
+            return true
+        }
+        
+        if let friend = friendCodes.first(where: { $0.code == clean }) {
+            currentRole = .friend
+            currentUserName = friend.friendName
+            activePermissions = friend
+            isAuthenticated = true
+            saveSession()
+            return true
+        }
+        return false
+    }
+    
+    private func saveSession() {
+        UserDefaults.standard.set(isAuthenticated, forKey: "isAuthenticated")
+        UserDefaults.standard.set(currentRole.rawValue, forKey: "currentRole")
+        UserDefaults.standard.set(currentUserName, forKey: "currentUserName")
+        if let perm = activePermissions, let encoded = try? JSONEncoder().encode(perm) {
+            UserDefaults.standard.set(encoded, forKey: "savedActivePermissions")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "savedActivePermissions")
+        }
+    }
+    
+    func logout() {
+        isAuthenticated = false
+        activePermissions = nil
+        UserDefaults.standard.set(false, forKey: "isAuthenticated")
+        UserDefaults.standard.removeObject(forKey: "savedActivePermissions")
+    }
+    
+    func updateOwnerPin(newPin: String) {
+        guard newPin.count >= 4 else { return }
+        ownerPin = newPin
+        UserDefaults.standard.set(newPin, forKey: "ownerPin")
+        showToast(isArabic ? "تم حفظ رمز المالك الجديد" : "Owner PIN Saved")
+    }
+    
+    func addFriendCode(_ access: AccessCode) {
+        friendCodes.append(access)
+        if let encoded = try? JSONEncoder().encode(friendCodes) {
+            UserDefaults.standard.set(encoded, forKey: "friendCodes")
+        }
+        showToast(isArabic ? "تم حفظ رمز \(access.friendName)" : "Code Saved")
+    }
+    
+    func removeFriendCode(id: String) {
+        friendCodes.removeAll { $0.id == id }
+        if let encoded = try? JSONEncoder().encode(friendCodes) {
+            UserDefaults.standard.set(encoded, forKey: "friendCodes")
+        }
+    }
+    
     var isOwner: Bool { currentRole == .owner }
     var canPower: Bool { isOwner || (activePermissions?.canPowerControl ?? false) }
     var canEdit: Bool { isOwner || (activePermissions?.canEditSettings ?? false) }
@@ -133,15 +219,15 @@ class ServerStore: ObservableObject {
         self.isDemoMode = demo
         UserDefaults.standard.set(self.panelURL, forKey: "panelURL")
         UserDefaults.standard.set(self.apiKey, forKey: "apiKey")
+        UserDefaults.standard.set(self.isDemoMode, forKey: "isDemoMode")
         
-        if demo {
-            loadDemoServers()
-        } else {
+        if !demo {
             Task { await fetchServersFromAPI() }
         }
+        showToast(isArabic ? "تم حفظ إعدادات الربط" : "Connection Saved")
     }
     
-    func loadDemoServers() {
+    func loadDefaultServers() {
         servers = [
             GameServer(
                 id: "ark-01",
@@ -157,15 +243,16 @@ class ServerStore: ObservableObject {
                 config: FullServerConfig(
                     mods: [
                         GameMod(modId: "928793", name: "Super Cryo Storage (SCS)",
-                                arabicDescription: "كرات تخزين متطورة لحفظ الديناصورات مع تفريخ البيض تلقائياً."),
+                                arabicDescription: "كرات تخزين متطورة لحفظ الديناصورات مع ثلاجة تفريخ البيض تلقائياً.",
+                                iconName: "snowflake.circle.fill"),
                         GameMod(modId: "929110", name: "Awesome SpyGlass!",
-                                arabicDescription: "منظار ذكي يعرض نقاط القوة للديناصور قبل ترويضه.")
+                                arabicDescription: "منظار ذكي يعرض نقاط القوة للديناصور قبل ترويضه.",
+                                iconName: "scope")
                     ]
                 ),
                 consoleLogs: [
                     "[NOIR Engine] ARK: Survival Ascended Server Initialized",
-                    "[Mods] Loaded 2 CurseForge Mods: 928793, 929110",
-                    "[Network] Listening on 0.0.0.0:7777 - Ready"
+                    "[Mods] Loaded 2 CurseForge Mods: 928793, 929110"
                 ]
             ),
             GameServer(
@@ -182,7 +269,8 @@ class ServerStore: ObservableObject {
                 config: FullServerConfig(
                     mods: [
                         GameMod(modId: "GeyserMC", name: "Bedrock Crossplay",
-                                arabicDescription: "يسمح للاعبي الجوال والبلايستيشن بالدخول مع لاعبي الكمبيوتر.")
+                                arabicDescription: "يسمح للاعبي الجوال والبلايستيشن بالدخول مع لاعبي الكمبيوتر.",
+                                iconName: "cube.transparent.fill")
                     ]
                 ),
                 consoleLogs: [
@@ -190,6 +278,7 @@ class ServerStore: ObservableObject {
                 ]
             )
         ]
+        persistServers()
     }
     
     func fetchServersFromAPI() async {
@@ -229,7 +318,10 @@ class ServerStore: ObservableObject {
                         ))
                     }
                 }
-                if !fetched.isEmpty { self.servers = fetched }
+                if !fetched.isEmpty {
+                    self.servers = fetched
+                    persistServers()
+                }
             }
         } catch {
             showToast(isArabic ? "تعذر الاتصال بالسيرفر" : "Connection failed")
@@ -238,64 +330,76 @@ class ServerStore: ObservableObject {
     
     func sendPowerAction(serverId: String, action: String) {
         guard canPower, let idx = servers.firstIndex(where: { $0.id == serverId }) else { return }
-        if isDemoMode {
-            if action == "start" {
-                servers[idx].status = .running
-                servers[idx].cpuUsage = 36.0
-                servers[idx].ramUsedGB = servers[idx].ramTotalGB * 0.72
-                servers[idx].consoleLogs.append("[\(currentUserName)] Started server.")
-            } else if action == "stop" {
-                servers[idx].status = .offline
-                servers[idx].cpuUsage = 0
-                servers[idx].ramUsedGB = 0
-                servers[idx].playersOnline = 0
-                servers[idx].consoleLogs.append("[\(currentUserName)] Stopped server.")
-            } else if action == "restart" {
-                servers[idx].status = .starting
-                servers[idx].consoleLogs.append("[\(currentUserName)] Restarting server...")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                    self.servers[idx].status = .running
-                    self.servers[idx].consoleLogs.append("[NOIR] Server Online!")
-                }
-            }
-            showToast(isArabic ? "تم تنفيذ: \(action)" : "Executed: \(action)")
-            return
-        }
+        let sName = servers[idx].name
         
-        Task {
-            guard let url = URL(string: "\(panelURL)/api/client/servers/\(serverId)/power") else { return }
-            var req = URLRequest(url: url)
-            req.httpMethod = "POST"
-            req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = try? JSONSerialization.data(withJSONObject: ["signal": action])
-            _ = try? await URLSession.shared.data(for: req)
-            showToast(isArabic ? "تم إرسال أمر \(action)" : "Sent \(action)")
+        if action == "start" {
+            servers[idx].status = .running
+            servers[idx].cpuUsage = 36.0
+            servers[idx].ramUsedGB = servers[idx].ramTotalGB * 0.72
+            servers[idx].consoleLogs.append("[\(currentUserName)] Started server.")
+            logActivity(serverName: sName, action: "تشغيل السيرفر", category: "power")
+        } else if action == "stop" {
+            servers[idx].status = .offline
+            servers[idx].cpuUsage = 0
+            servers[idx].ramUsedGB = 0
+            servers[idx].playersOnline = 0
+            servers[idx].consoleLogs.append("[\(currentUserName)] Stopped server.")
+            logActivity(serverName: sName, action: "إيقاف السيرفر", category: "power")
+        } else if action == "restart" {
+            servers[idx].status = .starting
+            servers[idx].consoleLogs.append("[\(currentUserName)] Restarting server...")
+            logActivity(serverName: sName, action: "إعادة تشغيل السيرفر", category: "power")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                self.servers[idx].status = .running
+                self.servers[idx].consoleLogs.append("[NOIR] Server Online!")
+                self.persistServers()
+            }
         }
+        persistServers()
+        
+        if !isDemoMode {
+            Task {
+                guard let url = URL(string: "\(panelURL)/api/client/servers/\(serverId)/power") else { return }
+                var req = URLRequest(url: url)
+                req.httpMethod = "POST"
+                req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                req.httpBody = try? JSONSerialization.data(withJSONObject: ["signal": action])
+                _ = try? await URLSession.shared.data(for: req)
+            }
+        }
+        showToast(isArabic ? "تم تنفيذ: \(action)" : "Executed: \(action)")
     }
     
     func sendCommand(serverId: String, command: String) {
         guard canConsole, !command.isEmpty,
               let idx = servers.firstIndex(where: { $0.id == serverId }) else { return }
         servers[idx].consoleLogs.append("> \(command)")
-        if isDemoMode {
-            servers[idx].consoleLogs.append("[Server] Executed: \(command)")
-            return
-        }
-        Task {
-            guard let url = URL(string: "\(panelURL)/api/client/servers/\(serverId)/command") else { return }
-            var req = URLRequest(url: url)
-            req.httpMethod = "POST"
-            req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = try? JSONSerialization.data(withJSONObject: ["command": command])
-            _ = try? await URLSession.shared.data(for: req)
+        servers[idx].consoleLogs.append("[Server] Executed: \(command)")
+        logActivity(serverName: servers[idx].name, action: "أمر كونسول: \(command)", category: "config")
+        persistServers()
+        
+        if !isDemoMode {
+            Task {
+                guard let url = URL(string: "\(panelURL)/api/client/servers/\(serverId)/command") else { return }
+                var req = URLRequest(url: url)
+                req.httpMethod = "POST"
+                req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                req.httpBody = try? JSONSerialization.data(withJSONObject: ["command": command])
+                _ = try? await URLSession.shared.data(for: req)
+            }
         }
     }
     
-    func applyFullConfig(serverId: String, config: FullServerConfig) {
+    func applyFullConfig(serverId: String, config: FullServerConfig, customLogText: String? = nil) {
         guard let idx = servers.firstIndex(where: { $0.id == serverId }) else { return }
         servers[idx].config = config
+        
+        let logMsg = customLogText ?? "تحديث الإعدادات (تجميع x\(Int(config.harvestMultiplier))، ترويض x\(Int(config.tamingSpeed)))"
+        servers[idx].consoleLogs.append("[\(currentUserName)] \(logMsg)")
+        logActivity(serverName: servers[idx].name, action: logMsg, category: customLogText != nil ? "mod" : "config")
+        persistServers()
         
         let modIds = config.mods.filter { $0.isEnabled }.map { $0.modId }.joined(separator: ",")
         let iniPayload = """
@@ -333,8 +437,6 @@ class ServerStore: ObservableObject {
         Message=\(config.motdMessage)
         """
         
-        servers[idx].consoleLogs.append("[\(currentUserName)] Saved all settings & \(config.mods.filter{$0.isEnabled}.count) mods.")
-        
         if !isDemoMode {
             let targetFile = servers[idx].game == .arkAscended
                 ? "%2FShooterGame%2FSaved%2FConfig%2FLinuxServer%2FGameUserSettings.ini"
@@ -350,7 +452,7 @@ class ServerStore: ObservableObject {
             }
         }
         
-        showToast(isArabic ? "تم حفظ جميع الإعدادات والمودات!" : "All Settings & Mods Saved!")
+        showToast(isArabic ? "تم الحفظ في ذاكرة التطبيق والسيرفر!" : "Saved Permanently!")
     }
     
     func createNewServer(name: String, game: GameType, ramGB: Double) {
@@ -370,12 +472,17 @@ class ServerStore: ObservableObject {
             consoleLogs: ["[NOIR] Deployed \(game.rawValue) server with \(Int(ramGB))GB RAM."]
         )
         servers.append(newServer)
-        showToast(isArabic ? "تم إنشاء سيرفر \(game.rawValue)" : "Created \(game.rawValue)")
+        persistServers()
+        logActivity(serverName: name, action: "إنشاء سيرفر جديد (\(game.rawValue))", category: "create")
+        showToast(isArabic ? "تم إنشاء وحفظ سيرفر \(game.rawValue)" : "Created \(game.rawValue)")
     }
     
     func deleteServer(serverId: String) {
         guard isOwner else { return }
+        let deletedName = servers.first(where: { $0.id == serverId })?.name ?? "Server"
         servers.removeAll { $0.id == serverId }
+        persistServers()
+        logActivity(serverName: deletedName, action: "حذف السيرفر نهائياً", category: "power")
         showToast(isArabic ? "تم حذف السيرفر نهائياً" : "Server deleted")
     }
     
