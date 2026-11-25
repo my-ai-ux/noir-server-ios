@@ -7,44 +7,45 @@ struct LoginView: View {
     
     var body: some View {
         ZStack {
-            Color(red: 0.05, green: 0.05, blue: 0.07).ignoresSafeArea()
+            LinearGradient(colors: [Color(red: 0.04, green: 0.06, blue: 0.12), Color(red: 0.08, green: 0.05, blue: 0.16)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .ignoresSafeArea()
             
             VStack(spacing: 28) {
                 Spacer()
                 
-                // شعار N الذهبي
                 ZStack {
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color(red: 0.10, green: 0.10, blue: 0.13))
-                        .frame(width: 96, height: 96)
-                        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.amberGold, lineWidth: 2))
+                    RoundedRectangle(cornerRadius: 28)
+                        .fill(LinearGradient(colors: [.electricCyan.opacity(0.25), .neonViolet.opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 100, height: 100)
+                        .overlay(RoundedRectangle(cornerRadius: 28).stroke(LinearGradient(colors: [.electricCyan, .neonViolet], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2))
                     Text("N")
-                        .font(.system(size: 48, weight: .black))
-                        .foregroundColor(.amberGold)
+                        .font(.system(size: 50, weight: .black))
+                        .foregroundStyle(LinearGradient(colors: [.electricCyan, .white], startPoint: .top, endPoint: .bottom))
                 }
                 
                 VStack(spacing: 8) {
                     Text("NOIR SERVER")
                         .font(.title.bold())
                         .foregroundColor(.white)
-                    Text(store.isArabic ? "أدخل رمز الدخول الخاص بك (المالك أو رمز الدعوة)" : "Enter your Owner PIN or Friend Access Code")
+                    Text(store.isArabic ? "سجل الدخول برمز المالك أو رمز الدعوة الخاص بك" : "Sign in with Owner PIN or Access Code")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
                 }
                 
                 VStack(spacing: 14) {
-                    SecureField(store.isArabic ? "رمز الدخول (مثال: 0000)" : "Access Code", text: $pinInput)
+                    SecureField(store.isArabic ? "أدخل الرمز (المالك: 0000)" : "Enter PIN", text: $pinInput)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.center)
                         .font(.title3.monospaced().bold())
                         .padding()
-                        .background(Color(red: 0.10, green: 0.10, blue: 0.13))
-                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(showError ? Color.red : Color.amberGold.opacity(0.4), lineWidth: 1.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .background(Color.white.opacity(0.06))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(showError ? Color.red : Color.electricCyan.opacity(0.5), lineWidth: 1.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
                     
                     if showError {
-                        Text(store.isArabic ? "رمز الدخول غير صحيح!" : "Invalid Access Code!")
+                        Text(store.isArabic ? "رمز الدخول غير صحيح!" : "Invalid PIN!")
                             .font(.caption.bold())
                             .foregroundColor(.red)
                     }
@@ -57,13 +58,13 @@ struct LoginView: View {
                             showError = true
                         }
                     } label: {
-                        Text(store.isArabic ? "دخول إلى لوحة التحكم" : "Unlock Panel")
+                        Text(store.isArabic ? "تسجيل الدخول" : "Sign In")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.amberGold)
-                            .foregroundColor(.black)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .background(LinearGradient(colors: [.electricCyan, .neonViolet], startPoint: .leading, endPoint: .trailing))
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                 }
                 .padding(.horizontal, 28)
@@ -73,9 +74,9 @@ struct LoginView: View {
                 Button {
                     store.isArabic.toggle()
                 } label: {
-                    Text(store.isArabic ? "Switch to English" : "التبديل إلى العربية")
+                    Text(store.isArabic ? "English" : "العربية")
                         .font(.caption.bold())
-                        .foregroundColor(.amberGold)
+                        .foregroundColor(.electricCyan)
                 }
                 .padding(.bottom, 20)
             }
