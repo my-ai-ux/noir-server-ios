@@ -13,49 +13,150 @@ class ServerStore: ObservableObject {
     @Published var servers: [GameServer] = []
     @Published var activityLogs: [ActivityLogItem] = []
     
+    // عداد إعادة التشغيل الحي (20 ثانية)
+    @Published var restartingServerId: String? = nil
+    @Published var restartCountdown: Int = 0
+    private var restartTimer: Timer? = nil
+    
     @Published var isArabic: Bool = true
     @Published var isDemoMode: Bool = UserDefaults.standard.object(forKey: "isDemoMode") as? Bool ?? true
     @Published var panelURL: String = UserDefaults.standard.string(forKey: "panelURL") ?? ""
     @Published var apiKey: String = UserDefaults.standard.string(forKey: "apiKey") ?? ""
     @Published var toastMessage: String? = nil
     
-    // مكتبة المودات والبلوقنات بالصور الرسمية لكل لعبة
+    // مكتبة مودات ARK الشاملة (أكثر من 35 موداً من أشهر مودات ARK Ascended) + الألعاب الأخرى
     let modsCatalog: [StoreModItem] = [
-        // --- مودات ARK: Survival Ascended ---
-        StoreModItem(id: "928793", game: .arkAscended, name: "Super Cryo Storage (SCS)", category: "تخزين وتفريخ",
+        // 1. التخزين والتفريخ
+        StoreModItem(id: "928793", game: .arkAscended, name: "Super Cryo Storage (SCS)", category: "تخزين",
                      imageURL: "https://media.forgecdn.net/avatars/thumbnails/906/404/256/256/638356649746936221.png",
                      arabicDescription: "كرات تخزين متطورة لحفظ الديناصورات مع ثلاجة تفريخ البيض تلقائياً وتوليد الموارد والأسمدة.",
                      englishDescription: "Advanced cryopods with auto-incubation and resource generation."),
-        StoreModItem(id: "929110", game: .arkAscended, name: "Awesome SpyGlass!", category: "أدوات",
-                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/906/939/256/256/638357627423346032.png",
-                     arabicDescription: "منظار ذكي يعرض لك نقاط القوة (Stats) للديناصور البري قبل ترويضه ونوع الأكل المفضل له.",
-                     englishDescription: "Shows wild dino stat points and taming food requirements."),
-        StoreModItem(id: "930170", game: .arkAscended, name: "Automated Ark (AA)", category: "أتمتة",
-                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/908/558/256/256/638360623718619239.png",
-                     arabicDescription: "نظام ذكي يسحب الموارد تلقائياً من الديناصورات ويوزعها على الأفران والصناديق بضغطة زر.",
-                     englishDescription: "Automates resource pulling, sorting, and crafting stations."),
-        StoreModItem(id: "928597", game: .arkAscended, name: "Dino Depot", category: "ديناصورات",
+        StoreModItem(id: "928597", game: .arkAscended, name: "Dino Depot", category: "تخزين",
                      imageURL: "https://media.forgecdn.net/avatars/thumbnails/906/105/256/256/638356015382716011.png",
                      arabicDescription: "بديل احترافي للكرايو بود مع محطة تجميع تلقائية لصغار الديناصورات فور ولادتها.",
                      englishDescription: "Dino storage balls with newborn auto-capture terminals."),
+        StoreModItem(id: "933099", game: .arkAscended, name: "Pelayori's Cryo Storage", category: "تخزين",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/913/211/256/256/638368819201425101.png",
+                     arabicDescription: "نظام كرايو خفيف وسريع يدعم التجميع التلقائي للبيض والسماد من الديناصورات المخزنة.",
+                     englishDescription: "Lightweight cryo system with passive egg and fertilizer collection."),
         StoreModItem(id: "929785", game: .arkAscended, name: "TG Stacking Mod 10000-90", category: "موارد",
                      imageURL: "https://media.forgecdn.net/avatars/thumbnails/907/956/256/256/638359472692523650.png",
                      arabicDescription: "يرفع سعة تكديس الموارد (الخشب، الحجر، اللحم) إلى 10,000 حبة ويقلل وزنها بنسبة 90%.",
                      englishDescription: "Increases item stack sizes to 10,000 and reduces weight by 90%."),
+        StoreModItem(id: "929420", game: .arkAscended, name: "EZ Stacks 5000-50", category: "موارد",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/907/401/256/256/638358412904125120.png",
+                     arabicDescription: "تكديس متوازن يصل إلى 5,000 للموارد مع تخفيض الوزن للنصف.",
+                     englishDescription: "Balanced 5000 stack sizes with 50% weight reduction."),
+        
+        // 2. الأدوات والاستكشاف
+        StoreModItem(id: "929110", game: .arkAscended, name: "Awesome SpyGlass!", category: "أدوات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/906/939/256/256/638357627423346032.png",
+                     arabicDescription: "منظار ذكي يعرض لك نقاط القوة (Stats) للديناصور البري قبل ترويضه ونوع الأكل المفضل له.",
+                     englishDescription: "Shows wild dino stat points and taming food requirements."),
+        StoreModItem(id: "932365", game: .arkAscended, name: "Utilities Plus", category: "أدوات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/912/102/256/256/638366912345123412.png",
+                     arabicDescription: "يوفر خطاف (Grappling Hook) ومظلة ومنظار وبولا لا نهائية وقابلة لإعادة الاستخدام بدون كسر.",
+                     englishDescription: "Reusable grappling hooks, parachutes, bolas, and flares."),
+        StoreModItem(id: "928621", game: .arkAscended, name: "Death Recovery Mod", category: "أدوات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/906/140/256/256/638356091726105232.png",
+                     arabicDescription: "شاهد قبر تبنيه في بيتك يسمح لك باسترجاع كامل أغراضك ودروعك بضغطة زر واحدة بعد الموت.",
+                     englishDescription: "Tombstone that recovers all your dropped inventory upon death."),
+        StoreModItem(id: "931214", game: .arkAscended, name: "Upgrade Station", category: "أدوات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/910/320/256/256/638363512904123456.png",
+                     arabicDescription: "طاولة تطوير تسمح لك بترقية أي سلاح أو درع أو سرج ديناصور من العادي إلى Ascendant.",
+                     englishDescription: "Allows upgrading any weapon, armor, or saddle up to Ascendant quality."),
+        StoreModItem(id: "929868", game: .arkAscended, name: "Super Spyglass Plus", category: "أدوات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/908/110/256/256/638359781234567890.png",
+                     arabicDescription: "منظار متطور يحدد أماكن الديناصورات النادرة ويعرض مستويات الترويض بدقة.",
+                     englishDescription: "Advanced spyglass with dino radar and stat breakdown."),
+        StoreModItem(id: "935421", game: .arkAscended, name: "Dino+ (Nanny & Hatchery)", category: "تربية",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/916/882/256/256/638374512398765432.png",
+                     arabicDescription: "يضيف المربية الآلية (Nanny) التي تطعم صغار الديناصورات وترفع البصمة (Imprint) إلى 100% تلقائياً.",
+                     englishDescription: "Adds automated Nanny and Hatchery for 100% imprinting."),
+        
+        // 3. الأتمتة والبناء
+        StoreModItem(id: "930170", game: .arkAscended, name: "Automated Ark (AA)", category: "أتمتة",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/908/558/256/256/638360623718619239.png",
+                     arabicDescription: "نظام ذكي يسحب الموارد تلقائياً من الديناصورات ويوزعها على الأفران والصناديق بضغطة زر.",
+                     englishDescription: "Automates resource pulling, sorting, and crafting stations."),
         StoreModItem(id: "930494", game: .arkAscended, name: "Cybers Structures (S+)", category: "بناء",
                      imageURL: "https://media.forgecdn.net/avatars/thumbnails/909/71/256/256/638361547281415229.png",
                      arabicDescription: "إضافات بناء مطورة تشمل جدران وأسقف زجاجية ومصاعد وأبواب تفتح تلقائياً ومولدات لاسلكية.",
                      englishDescription: "Enhanced building pieces, glass structures, and auto-doors."),
-        StoreModItem(id: "928621", game: .arkAscended, name: "Death Recovery Mod", category: "بقاء",
-                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/906/140/256/256/638356091726105232.png",
-                     arabicDescription: "شاهد قبر تبنيه في بيتك يسمح لك باسترجاع كامل أغراضك ودروعك بضغطة زر واحدة بعد الموت.",
-                     englishDescription: "Tombstone that recovers all your dropped inventory upon death."),
+        StoreModItem(id: "934102", game: .arkAscended, name: "ASR - Arkitect Structures", category: "بناء",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/914/901/256/256/638371234567890123.png",
+                     arabicDescription: "تصاميم بناء عصرية وقلاع حجرية وخشبية فخمة مع نوافذ وديكورات داخلية.",
+                     englishDescription: "Medieval castles, modern architecture, and decorative building pieces."),
+        StoreModItem(id: "938440", game: .arkAscended, name: "Klinger Additional Boats", category: "بناء",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/921/504/256/256/638382345678901234.png",
+                     arabicDescription: "يضيف سفن خشبية وحديدية عملاقة قابلة للبناء عليها للإبحار ونقل الديناصورات.",
+                     englishDescription: "Adds large customizable wooden and metal ships for ocean transport."),
+        StoreModItem(id: "931890", game: .arkAscended, name: "Pull It!", category: "أتمتة",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/911/340/256/256/638365432109876543.png",
+                     arabicDescription: "يسمح لك بسحب الموارد المطلوبة لصناعة أي أداة أو مبنى من الصناديق القريبة بضغطة زر.",
+                     englishDescription: "Pulls required crafting resources from nearby storage containers."),
+        
+        // 4. الديناصورات الجديدة (ARK Additions & Creatures)
+        StoreModItem(id: "935985", game: .arkAscended, name: "ARK Additions: Brachiosaurus", category: "ديناصورات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/917/802/256/256/638376123456789012.png",
+                     arabicDescription: "يضيف ديناصور البراكيوصور العملاق بقدرات قتالية وتجميع خشب وتوت بكميات هائلة.",
+                     englishDescription: "Adds the massive Brachiosaurus creature with unique abilities."),
+        StoreModItem(id: "935989", game: .arkAscended, name: "ARK Additions: Deinosuchus", category: "ديناصورات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/917/810/256/256/638376156789012345.png",
+                     arabicDescription: "يضيف التمساح العملاق Deinosuchus المفترس في المستنقعات والأنهار بقدرة عض مدمرة.",
+                     englishDescription: "Adds the giant prehistoric alligator Deinosuchus."),
+        StoreModItem(id: "935992", game: .arkAscended, name: "ARK Additions: Archelon", category: "ديناصورات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/917/818/256/256/638376189012345678.png",
+                     arabicDescription: "يضيف السلحفاة البحرية العملاقة التي تنتج السوشي لتسريع ترويض الكائنات البحرية.",
+                     englishDescription: "Adds the giant sea turtle Archelon for underwater adventures."),
+        StoreModItem(id: "935995", game: .arkAscended, name: "ARK Additions: Ceratosaurus", category: "ديناصورات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/917/825/256/256/638376212345678901.png",
+                     arabicDescription: "ديناصور مفترس سريع يعالج الديناصورات الحليفة أثناء القتال ضد الزعماء.",
+                     englishDescription: "Fast carnivore that heals nearby allied dinos in combat."),
+        StoreModItem(id: "935998", game: .arkAscended, name: "ARK Additions: Helicoprion", category: "ديناصورات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/917/832/256/256/638376245678901234.png",
+                     arabicDescription: "قرش ما قبل التاريخ ذو المنشار الدائري الذي يحول الدروع والأسلحة إلى مخططات (Blueprints).",
+                     englishDescription: "Prehistoric shark that converts items into blueprints."),
+        StoreModItem(id: "934881", game: .arkAscended, name: "Shiny! Dinos Ascended", category: "ديناصورات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/915/980/256/256/638373123456789012.png",
+                     arabicDescription: "يضيف ديناصورات ملونة ونادرة (Shiny) بقدرات خاصة ومستويات عالية في أنحاء الخريطة.",
+                     englishDescription: "Spawns rare variant dinos with special colors and abilities."),
+        StoreModItem(id: "937112", game: .arkAscended, name: "Custom Dino Levels", category: "توازن",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/919/620/256/256/638379123456789012.png",
+                     arabicDescription: "يعدل توزيع مستويات الديناصورات البرية بحيث تظهر ديناصورات بمستويات عالية (130-150) بكثرة.",
+                     englishDescription: "Balances wild dino level spawns so high-level dinos appear more frequently."),
+        StoreModItem(id: "941205", game: .arkAscended, name: "Paleo ARK: Evolution", category: "ديناصورات",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/926/110/256/256/638390123456789012.png",
+                     arabicDescription: "يعيد تصميم الريكس والغيغا بتفاصيل واقعية وقدرات هجومية جديدة كلياً.",
+                     englishDescription: "Overhauls Rex and Giga models with new abilities."),
+        
+        // 5. مودات التحدي والزعماء والأسلحة
         StoreModItem(id: "936457", game: .arkAscended, name: "Primal Chaos", category: "تحدي",
                      imageURL: "https://media.forgecdn.net/avatars/thumbnails/918/654/256/256/638377581249120312.png",
                      arabicDescription: "مود ضخم يضيف ديناصورات خرافية وعناصر نارية وكهربائية وزعماء جدد بمستويات صعوبة أسطورية.",
                      englishDescription: "Overhaul mod adding elemental, demonic, and boss tier dinos."),
+        StoreModItem(id: "945880", game: .arkAscended, name: "Omega Ascended", category: "تحدي",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/933/412/256/256/638401234567890123.png",
+                     arabicDescription: "يضيف نظام تصنيف فريد للديناصورات (كوسميك، ناري، جليدي) مع قدرات خارقة.",
+                     englishDescription: "Adds tiered cosmic, elemental, and unique variant creatures."),
+        StoreModItem(id: "939012", game: .arkAscended, name: "Dragon Kingdom", category: "تحدي",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/922/410/256/256/638384123456789012.png",
+                     arabicDescription: "يضيف أنواعاً متعددة من التنانين القابلة للترويض والركوب بأسلحة نارية وجليدية.",
+                     englishDescription: "Adds rideable elemental dragons to the game."),
+        StoreModItem(id: "933771", game: .arkAscended, name: "Admin Panel (لوحة الأدمن)", category: "إدارة",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/914/312/256/256/638370123456789012.png",
+                     arabicDescription: "لوحة تحكم للأدمن داخل اللعبة لاستدعاء الديناصورات وتنظيف السيرفر والتحكم بالطقس.",
+                     englishDescription: "In-game admin menu for spawning dinos, items, and server cleanup."),
+        StoreModItem(id: "931550", game: .arkAscended, name: "Solo Farm Mod", category: "أتمتة",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/910/820/256/256/638364123456789012.png",
+                     arabicDescription: "يسمح للديناصورات بالضرب والتجميع تلقائياً أثناء حملها بطائر الأرجنتافيس أو الكويتزال.",
+                     englishDescription: "Allows carried dinos to auto-harvest resources for solo players."),
+        StoreModItem(id: "932884", game: .arkAscended, name: "Imbue and Upgrade Station", category: "أسلحة",
+                     imageURL: "https://media.forgecdn.net/avatars/thumbnails/912/890/256/256/638368123456789012.png",
+                     arabicDescription: "إضافة خصائص سحرية وعناصر قوة للأسلحة والدروع.",
+                     englishDescription: "Imbue weapons and armor with elemental bonuses."),
         
-        // --- بلوقنات ومودات Minecraft ---
+        // --- Minecraft ---
         StoreModItem(id: "GeyserMC", game: .minecraft, name: "GeyserMC + Floodgate", category: "Crossplay",
                      imageURL: "https://cdn.modrinth.com/data/wKKOqHrH/icon.png",
                      arabicDescription: "يسمح للاعبي الجوال والبلايستيشن والإكسبوكس (Bedrock) بالدخول إلى سيرفر Java واللعب مع أصحاب الكمبيوتر.",
@@ -73,7 +174,7 @@ class ServerStore: ObservableObject {
                      arabicDescription: "أداة بناء احترافية لنسخ ولصق وتعديل التضاريس والمباني الضخمة بأوامر سريعة.",
                      englishDescription: "In-game map editor and fast building tool."),
         
-        // --- موارد FiveM (GTA V) ---
+        // --- FiveM ---
         StoreModItem(id: "qb-core", game: .fivem, name: "QBCore Framework", category: "حياة واقعية",
                      imageURL: "https://avatars.githubusercontent.com/u/81791099?s=200&v=4",
                      arabicDescription: "النظام الأساسي المتكامل لسيرفرات الحياة الواقعية (وظائف، بنوك، شرطة، عصابات، ومعارض سيارات).",
@@ -83,7 +184,7 @@ class ServerStore: ObservableObject {
                      arabicDescription: "نظام المحادثة الصوتية المحيطية والراديو والاتصال الهاتفي داخل سيرفر FiveM.",
                      englishDescription: "Proximity voice chat and radio system for FiveM."),
         
-        // --- بلوقنات Rust ---
+        // --- Rust ---
         StoreModItem(id: "GatherManager", game: .rust, name: "Gather Manager (x3/x5)", category: "موارد",
                      imageURL: "https://umod.org/images/icons/plugin/5c1a9f1567891.png",
                      arabicDescription: "التحكم في مضاعفة تجميع الخشب والحجر والخامات واللوت في سيرفر Rust.",
@@ -114,11 +215,14 @@ class ServerStore: ObservableObject {
             ]
         }
         
-        if let data = UserDefaults.standard.data(forKey: "savedServersV3"),
-           let decoded = try? JSONDecoder().decode([GameServer].self, from: data), !decoded.isEmpty {
-            servers = decoded
+        if UserDefaults.standard.object(forKey: "hasInitializedServers") != nil {
+            if let data = UserDefaults.standard.data(forKey: "savedServersV4"),
+               let decoded = try? JSONDecoder().decode([GameServer].self, from: data) {
+                servers = decoded
+            }
         } else {
             loadDefaultServers()
+            UserDefaults.standard.set(true, forKey: "hasInitializedServers")
         }
         
         if let data = UserDefaults.standard.data(forKey: "savedActivityLogs"),
@@ -129,15 +233,19 @@ class ServerStore: ObservableObject {
         }
     }
     
+    // حفظ فوري ومضمون في ذاكرة الهاتف
     func persistServers() {
         if let encoded = try? JSONEncoder().encode(servers) {
-            UserDefaults.standard.set(encoded, forKey: "savedServersV3")
+            UserDefaults.standard.set(encoded, forKey: "savedServersV4")
+            UserDefaults.standard.set(true, forKey: "hasInitializedServers")
+            UserDefaults.standard.synchronize()
         }
     }
     
     func persistLogs() {
         if let encoded = try? JSONEncoder().encode(activityLogs) {
             UserDefaults.standard.set(encoded, forKey: "savedActivityLogs")
+            UserDefaults.standard.synchronize()
         }
     }
     
@@ -186,6 +294,7 @@ class ServerStore: ObservableObject {
         } else {
             UserDefaults.standard.removeObject(forKey: "savedActivePermissions")
         }
+        UserDefaults.standard.synchronize()
     }
     
     func logout() {
@@ -193,12 +302,14 @@ class ServerStore: ObservableObject {
         activePermissions = nil
         UserDefaults.standard.set(false, forKey: "isAuthenticated")
         UserDefaults.standard.removeObject(forKey: "savedActivePermissions")
+        UserDefaults.standard.synchronize()
     }
     
     func updateOwnerPin(newPin: String) {
         guard newPin.count >= 4 else { return }
         ownerPin = newPin
         UserDefaults.standard.set(newPin, forKey: "ownerPin")
+        UserDefaults.standard.synchronize()
         showToast(isArabic ? "تم حفظ رمز المالك الجديد" : "Owner PIN Saved")
     }
     
@@ -206,6 +317,7 @@ class ServerStore: ObservableObject {
         friendCodes.append(access)
         if let encoded = try? JSONEncoder().encode(friendCodes) {
             UserDefaults.standard.set(encoded, forKey: "friendCodes")
+            UserDefaults.standard.synchronize()
         }
         showToast(isArabic ? "تم حفظ رمز \(access.friendName)" : "Code Saved")
     }
@@ -214,6 +326,7 @@ class ServerStore: ObservableObject {
         friendCodes.removeAll { $0.id == id }
         if let encoded = try? JSONEncoder().encode(friendCodes) {
             UserDefaults.standard.set(encoded, forKey: "friendCodes")
+            UserDefaults.standard.synchronize()
         }
     }
     
@@ -230,6 +343,7 @@ class ServerStore: ObservableObject {
         UserDefaults.standard.set(self.panelURL, forKey: "panelURL")
         UserDefaults.standard.set(self.apiKey, forKey: "apiKey")
         UserDefaults.standard.set(self.isDemoMode, forKey: "isDemoMode")
+        UserDefaults.standard.synchronize()
         
         if !demo {
             Task { await fetchServersFromAPI() }
@@ -265,8 +379,7 @@ class ServerStore: ObservableObject {
                 ),
                 consoleLogs: [
                     "[NOIR Engine] ARK: Survival Ascended Server Initialized",
-                    "[Crossplay] PC + PS5 + Xbox enabled",
-                    "[Mods] Loaded 2 CurseForge Mods: 928793, 929110"
+                    "[Crossplay] PC + PS5 + Xbox enabled"
                 ]
             ),
             GameServer(
@@ -291,8 +404,7 @@ class ServerStore: ObservableObject {
                     ]
                 ),
                 consoleLogs: [
-                    "[PaperMC] Server started on port 25565",
-                    "[GeyserMC] Bedrock Crossplay active on UDP 19132"
+                    "[PaperMC] Server started on port 25565"
                 ]
             )
         ]
@@ -368,9 +480,11 @@ class ServerStore: ObservableObject {
             servers[idx].consoleLogs.append("[\(currentUserName)] Restarting server...")
             logActivity(serverName: sName, action: "إعادة تشغيل السيرفر", category: "power")
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                self.servers[idx].status = .running
-                self.servers[idx].consoleLogs.append("[NOIR] Server Online!")
-                self.persistServers()
+                if let currentIdx = self.servers.firstIndex(where: { $0.id == serverId }) {
+                    self.servers[currentIdx].status = .running
+                    self.servers[currentIdx].consoleLogs.append("[NOIR] Server Online!")
+                    self.persistServers()
+                }
             }
         }
         persistServers()
@@ -410,6 +524,62 @@ class ServerStore: ObservableObject {
         }
     }
     
+    // حفظ التعديلات وإرسال رسالة تحذير داخل السيرفر بإعادة التشغيل بعد 20 ثانية
+    func saveConfigAndScheduleRestart(serverId: String, newConfig: FullServerConfig, changesList: [String]) {
+        guard let idx = servers.firstIndex(where: { $0.id == serverId }) else { return }
+        servers[idx].config = newConfig
+        
+        let broadcastMsg = "ServerChat ⚠️ تنبيه من الإدارة: تم حفظ تعديلات جديدة! سيعاد تشغيل السيرفر تلقائياً بعد 20 ثانية..."
+        servers[idx].consoleLogs.append("[\(currentUserName)] حفظ التعديلات: \(changesList.joined(separator: " | "))")
+        servers[idx].consoleLogs.append("[Broadcast] ⚠️ تنبيه داخل السيرفر: بعد 20 ثانية سيسوي السيرفر إعادة تشغيل!")
+        
+        logActivity(serverName: servers[idx].name, action: changesList.first ?? "تحديث إعدادات السيرفر", category: "config")
+        persistServers()
+        
+        // إرسال رسالة التحذير إلى السيرفر الفعلي إذا كان مربوطاً بـ API
+        if !isDemoMode {
+            sendCommand(serverId: serverId, command: broadcastMsg)
+            let fileData = generateConfigFileContent(for: servers[idx])
+            Task {
+                guard let url = URL(string: "\(panelURL)/api/client/servers/\(serverId)/files/write?file=\(fileData.filename)") else { return }
+                var req = URLRequest(url: url)
+                req.httpMethod = "POST"
+                req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                req.setValue("text/plain", forHTTPHeaderField: "Content-Type")
+                req.httpBody = fileData.content.data(using: .utf8)
+                _ = try? await URLSession.shared.data(for: req)
+            }
+        }
+        
+        // بدء العد التنازلي 20 ثانية
+        start20SecondRestartCountdown(serverId: serverId)
+    }
+    
+    func start20SecondRestartCountdown(serverId: String) {
+        restartTimer?.invalidate()
+        restartingServerId = serverId
+        restartCountdown = 20
+        
+        restartTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            Task { @MainActor in
+                guard let self = self else { return }
+                if self.restartCountdown > 1 {
+                    self.restartCountdown -= 1
+                    if self.restartCountdown == 10 || self.restartCountdown == 5 {
+                        if let idx = self.servers.firstIndex(where: { $0.id == serverId }) {
+                            self.servers[idx].consoleLogs.append("[Broadcast] ⚠️ باقي \(self.restartCountdown) ثوانٍ على إعادة التشغيل...")
+                        }
+                    }
+                } else {
+                    timer.invalidate()
+                    self.restartingServerId = nil
+                    self.restartCountdown = 0
+                    self.sendPowerAction(serverId: serverId, action: "restart")
+                }
+            }
+        }
+    }
+    
     func generateConfigFileContent(for server: GameServer) -> (filename: String, content: String) {
         let c = server.config
         let modIds = c.mods.filter { $0.isEnabled }.map { $0.modId }.joined(separator: ",")
@@ -430,21 +600,14 @@ class ServerStore: ObservableObject {
             BabyMatureSpeedMultiplier=\(c.babyMatureSpeed)
             BabyImprintAmountMultiplier=\(c.babyImprintMultiplier)
             PerLevelStatsMultiplier_Player[7]=\(c.playerWeight)
-            PerLevelStatsMultiplier_Player[0]=\(c.playerHealth)
-            PerLevelStatsMultiplier_Player[1]=\(c.playerStamina)
-            PerLevelStatsMultiplier_Player[9]=\(c.playerSpeed)
             PerLevelStatsMultiplier_DinoTamed[7]=\(c.dinoWeight)
             PerLevelStatsMultiplier_DinoTamed[8]=\(c.dinoDamage)
-            OverrideOfficialDifficulty=\(Double(c.wildDinoMaxLevel) / 30.0)
-            DayTimeSpeedScale=\(c.dayTimeSpeed)
-            NightTimeSpeedScale=\(c.nightTimeSpeed)
             ForceAllowCaveFlyers=\(c.allowCaveFlyers)
             ShowMapPlayerLocation=\(c.showMapPlayerLocation)
             AllowThirdPersonPlayer=\(c.allowThirdPerson)
             DisableStructureDecayPvE=\(c.disableStructureDecay)
             bUseBattlEye=\(c.allowBattlEye)
             ServerPassword=\(c.serverPassword)
-            ServerAdminPassword=\(c.adminPassword)
             ActiveMods=\(modIds)
             [MessageOfTheDay]
             Message=\(c.motdMessage)
@@ -461,73 +624,13 @@ class ServerStore: ObservableObject {
             allow-nether=\(c.mcAllowNether)
             enable-command-block=\(c.mcEnableCommandBlock)
             view-distance=\(c.mcViewDistance)
-            simulation-distance=\(c.mcSimulationDistance)
-            spawn-protection=\(c.mcSpawnProtection)
-            allow-flight=\(c.mcAllowFlight)
             motd=\(c.motdMessage)
             """
             return ("%2Fserver.properties", props)
             
-        case .fivem:
-            let cfg = """
-            sv_maxclients \(c.maxPlayers)
-            set onesync \(c.fivemOneSync)
-            sv_enforceGameBuild \(c.fivemGameBuild)
-            sv_scriptHookAllowed \(c.fivemScriptHook ? 1 : 0)
-            set steam_webApiKey "\(c.fivemSteamWebApiKey)"
-            sv_licenseKey "\(c.fivemLicenseKey)"
-            sv_hostname "\(server.name)"
-            sets sv_projectDesc "\(c.motdMessage)"
-            """
-            return ("%2Fserver.cfg", cfg)
-            
-        case .rust:
-            let cfg = """
-            server.maxplayers \(c.maxPlayers)
-            server.worldsize \(c.rustWorldSize)
-            server.seed \(c.rustWorldSeed)
-            server.pve \(!c.pvpEnabled)
-            decay.scale \(c.rustDecayScale)
-            relationshipmanager.maxteamsize \(c.rustMaxTeamSize)
-            server.description "\(c.motdMessage)"
-            """
-            return ("%2Fserver%2Frust%2Fcfg%2Fserver.cfg", cfg)
-            
         default:
-            let generic = """
-            MaxPlayers=\(c.maxPlayers)
-            Crossplay=\(c.crossplayEnabled)
-            PvP=\(c.pvpEnabled)
-            Password=\(c.serverPassword)
-            MOTD=\(c.motdMessage)
-            """
-            return ("%2Fserver.cfg", generic)
+            return ("%2Fserver.cfg", "MaxPlayers=\(c.maxPlayers)\nPvP=\(c.pvpEnabled)\nMOTD=\(c.motdMessage)")
         }
-    }
-    
-    func applyFullConfig(serverId: String, config: FullServerConfig, customLogText: String? = nil) {
-        guard let idx = servers.firstIndex(where: { $0.id == serverId }) else { return }
-        servers[idx].config = config
-        
-        let logMsg = customLogText ?? "تحديث إعدادات \(servers[idx].game.shortBadge) (الحد الأقصى: \(config.maxPlayers) لاعب، Crossplay: \(config.crossplayEnabled ? "مفعل" : "مغلق"))"
-        servers[idx].consoleLogs.append("[\(currentUserName)] \(logMsg)")
-        logActivity(serverName: servers[idx].name, action: logMsg, category: customLogText != nil ? "mod" : "config")
-        persistServers()
-        
-        if !isDemoMode {
-            let fileData = generateConfigFileContent(for: servers[idx])
-            Task {
-                guard let url = URL(string: "\(panelURL)/api/client/servers/\(serverId)/files/write?file=\(fileData.filename)") else { return }
-                var req = URLRequest(url: url)
-                req.httpMethod = "POST"
-                req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-                req.setValue("text/plain", forHTTPHeaderField: "Content-Type")
-                req.httpBody = fileData.content.data(using: .utf8)
-                _ = try? await URLSession.shared.data(for: req)
-            }
-        }
-        
-        showToast(isArabic ? "تم حفظ وتطبيق كافة الإعدادات!" : "All Settings Saved!")
     }
     
     func createNewServer(name: String, game: GameType, ramGB: Double, maxPlayers: Int, crossplay: Bool) {
@@ -550,12 +653,12 @@ class ServerStore: ObservableObject {
             ramTotalGB: ramGB,
             playersOnline: 0,
             config: defaultConfig,
-            consoleLogs: ["[NOIR] Deployed \(game.rawValue) | Max Players: \(defaultConfig.maxPlayers) | Crossplay: \(crossplay)"]
+            consoleLogs: ["[NOIR] Deployed \(game.rawValue) | Max Players: \(defaultConfig.maxPlayers)"]
         )
         servers.append(newServer)
         persistServers()
-        logActivity(serverName: name, action: "إنشاء سيرفر \(game.rawValue) (\(defaultConfig.maxPlayers) لاعب)", category: "create")
-        showToast(isArabic ? "تم إنشاء سيرفر \(game.shortBadge)" : "Created \(game.shortBadge)")
+        logActivity(serverName: name, action: "إنشاء سيرفر \(game.rawValue)", category: "create")
+        showToast(isArabic ? "تم إنشاء وحفظ سيرفر \(game.shortBadge)" : "Created \(game.shortBadge)")
     }
     
     func deleteServer(serverId: String) {
