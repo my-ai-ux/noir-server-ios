@@ -1,0 +1,97 @@
+name: Build NOIR Server IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate NOIR AppIcon (1024x1024)
+        run: |
+          mkdir -p NOIRServer/Assets.xcassets/AppIcon.appiconset
+          python3 - << 'EOF'
+          from PIL import Image, ImageDraw, ImageFont
+
+          size = 1024
+          img = Image.new("RGB", (size, size), (13, 13, 18))
+          draw = ImageDraw.Draw(img)
+
+          # إطار ذهبي داخلي أنيق
+          gold = (242, 184, 64)
+          dark_gold = (120, 88, 25)
+          draw.rounded_rectangle([44, 44, size-44, size-44], radius=180, outline=dark_gold, width=8)
+          draw.rounded_rectangle([64, 64, size-64, size-64], radius=165, outline=gold, width=12)
+
+          # رسم حرف N هندسي فخم في المنتصف
+          w = 95
+          left, right, top, bottom = 290, 734, 270, 754
+          # العمود الأيسر
+          draw.rectangle([left, top, left+w, bottom], fill=gold)
+          # العمود الأيمن
+          draw.rectangle([right-w, top, right, bottom], fill=gold)
+          # الخط المائل
+          draw.polygon([(left, top), (left+w, top), (right, bottom), (right-w, bottom)], fill=gold)
+
+          img.save("NOIRServer/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
+          EOF
+
+          cat << 'EOF' > NOIRServer/Assets.xcassets/AppIcon.appiconset/Contents.json
+          {
+            "images" : [
+              {
+                "filename" : "AppIcon.png",
+                "idiom" : "universal",
+                "platform" : "ios",
+                "size" : "1024x1024"
+              }
+            ],
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          EOF
+
+          cat << 'EOF' > NOIRServer/Assets.xcassets/Contents.json
+          {
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          EOF
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build Unsigned App
+        run: |
+          xcodebuild -project NOIRServer.xcodeproj \
+            -scheme NOIRServer \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/NOIR\ Server.app Payload/
+          zip -r NOIR-Server.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOIR-Server-IPA
+          path: NOIR-Server.ipa
