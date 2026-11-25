@@ -203,55 +203,55 @@ struct FullServerConfig: Codable, Equatable {
     func diffSummary(comparedTo old: FullServerConfig, isArabic: Bool) -> [String] {
         var changes: [String] = []
         if maxPlayers != old.maxPlayers {
-            changes.append(isArabic ? "الحد الأقصى للاعبين: \(old.maxPlayers) ← \(maxPlayers)" : "Max Players: \(old.maxPlayers) → \(maxPlayers)")
+            changes.append(isArabic ? "الحد الأقصى للاعبين: \(old.maxPlayers) ← \(maxPlayers)" : "Max Players: \(old.maxPlayers) -> \(maxPlayers)")
         }
         if crossplayEnabled != old.crossplayEnabled {
-            changes.append(isArabic ? "اللعب المشترك (PC+Console): \(crossplayEnabled ? "مفعل" : "مغلق")" : "Crossplay: \(crossplayEnabled)")
+            changes.append(isArabic ? "اللعب المشترك (PC+Console): \(crossplayEnabled ? "مفعل" : "مغلق")" : "Crossplay: \(crossplayEnabled ? "Enabled" : "Disabled")")
         }
         if pvpEnabled != old.pvpEnabled {
-            changes.append(isArabic ? "وضع القتال (PvP): \(pvpEnabled ? "مفعل" : "مغلق")" : "PvP: \(pvpEnabled)")
+            changes.append(isArabic ? "وضع القتال (PvP): \(pvpEnabled ? "مفعل" : "مغلق")" : "PvP: \(pvpEnabled ? "Enabled" : "Disabled")")
         }
         if mapName != old.mapName {
-            changes.append(isArabic ? "الخريطة: \(old.mapName) ← \(mapName)" : "Map: \(old.mapName) → \(mapName)")
+            changes.append(isArabic ? "الخريطة: \(old.mapName) ← \(mapName)" : "Map: \(old.mapName) -> \(mapName)")
         }
         if harvestMultiplier != old.harvestMultiplier {
-            changes.append(isArabic ? "مضاعف التجميع: x\(old.harvestMultiplier) ← x\(harvestMultiplier)" : "Harvest: x\(old.harvestMultiplier) → x\(harvestMultiplier)")
+            changes.append(isArabic ? "مضاعف التجميع: x\(old.harvestMultiplier) ← x\(harvestMultiplier)" : "Harvest: x\(old.harvestMultiplier) -> x\(harvestMultiplier)")
         }
         if tamingSpeed != old.tamingSpeed {
-            changes.append(isArabic ? "سرعة الترويض: x\(old.tamingSpeed) ← x\(tamingSpeed)" : "Taming: x\(old.tamingSpeed) → x\(tamingSpeed)")
+            changes.append(isArabic ? "سرعة الترويض: x\(old.tamingSpeed) ← x\(tamingSpeed)" : "Taming: x\(old.tamingSpeed) -> x\(tamingSpeed)")
         }
         if xpMultiplier != old.xpMultiplier {
-            changes.append(isArabic ? "مضاعف الخبرة (XP): x\(old.xpMultiplier) ← x\(xpMultiplier)" : "XP: x\(old.xpMultiplier) → x\(xpMultiplier)")
+            changes.append(isArabic ? "مضاعف الخبرة (XP): x\(old.xpMultiplier) ← x\(xpMultiplier)" : "XP: x\(old.xpMultiplier) -> x\(xpMultiplier)")
         }
         if lootQuality != old.lootQuality {
-            changes.append(isArabic ? "جودة اللوت: x\(old.lootQuality) ← x\(lootQuality)" : "Loot: x\(old.lootQuality) → x\(lootQuality)")
+            changes.append(isArabic ? "جودة اللوت: x\(old.lootQuality) ← x\(lootQuality)" : "Loot: x\(old.lootQuality) -> x\(lootQuality)")
         }
         if stackSizeMultiplier != old.stackSizeMultiplier {
-            changes.append(isArabic ? "تكديس الموارد: x\(old.stackSizeMultiplier) ← x\(stackSizeMultiplier)" : "Stack: x\(old.stackSizeMultiplier) → x\(stackSizeMultiplier)")
+            changes.append(isArabic ? "تكديس الموارد: x\(old.stackSizeMultiplier) ← x\(stackSizeMultiplier)" : "Stack: x\(old.stackSizeMultiplier) -> x\(stackSizeMultiplier)")
         }
         if eggHatchSpeed != old.eggHatchSpeed {
-            changes.append(isArabic ? "سرعة فقس البيض: x\(old.eggHatchSpeed) ← x\(eggHatchSpeed)")
+            changes.append(isArabic ? "سرعة فقس البيض: x\(old.eggHatchSpeed) ← x\(eggHatchSpeed)" : "Egg Hatch: x\(old.eggHatchSpeed) -> x\(eggHatchSpeed)")
         }
         if babyMatureSpeed != old.babyMatureSpeed {
-            changes.append(isArabic ? "نمو الصغار: x\(old.babyMatureSpeed) ← x\(babyMatureSpeed)")
+            changes.append(isArabic ? "نمو الصغار: x\(old.babyMatureSpeed) ← x\(babyMatureSpeed)" : "Baby Mature: x\(old.babyMatureSpeed) -> x\(babyMatureSpeed)")
         }
         if babyImprintMultiplier != old.babyImprintMultiplier {
-            changes.append(isArabic ? "مضاعف البصمة: x\(old.babyImprintMultiplier) ← x\(babyImprintMultiplier)")
+            changes.append(isArabic ? "مضاعف البصمة: x\(old.babyImprintMultiplier) ← x\(babyImprintMultiplier)" : "Imprint: x\(old.babyImprintMultiplier) -> x\(babyImprintMultiplier)")
         }
         if playerWeight != old.playerWeight {
-            changes.append(isArabic ? "وزن اللاعب: x\(old.playerWeight) ← x\(playerWeight)")
+            changes.append(isArabic ? "وزن اللاعب: x\(old.playerWeight) ← x\(playerWeight)" : "Player Weight: x\(old.playerWeight) -> x\(playerWeight)")
         }
         if dinoWeight != old.dinoWeight {
-            changes.append(isArabic ? "وزن الديناصورات: x\(old.dinoWeight) ← x\(dinoWeight)")
+            changes.append(isArabic ? "وزن الديناصورات: x\(old.dinoWeight) ← x\(dinoWeight)" : "Dino Weight: x\(old.dinoWeight) -> x\(dinoWeight)")
         }
         if dinoDamage != old.dinoDamage {
-            changes.append(isArabic ? "ضرر الديناصورات: x\(old.dinoDamage) ← x\(dinoDamage)")
+            changes.append(isArabic ? "ضرر الديناصورات: x\(old.dinoDamage) ← x\(dinoDamage)" : "Dino Damage: x\(old.dinoDamage) -> x\(dinoDamage)")
         }
         if allowCaveFlyers != old.allowCaveFlyers {
-            changes.append(isArabic ? "طيران الكهوف: \(allowCaveFlyers ? "مسموح" : "ممنوع")")
+            changes.append(isArabic ? "طيران الكهوف: \(allowCaveFlyers ? "مسموح" : "ممنوع")" : "Cave Flyers: \(allowCaveFlyers ? "Allowed" : "Disabled")")
         }
         if showMapPlayerLocation != old.showMapPlayerLocation {
-            changes.append(isArabic ? "موقع اللاعب بالخريطة: \(showMapPlayerLocation ? "ظاهر" : "مخفي")")
+            changes.append(isArabic ? "موقع اللاعب بالخريطة: \(showMapPlayerLocation ? "ظاهر" : "مخفي")" : "Map Location: \(showMapPlayerLocation ? "Shown" : "Hidden")")
         }
         if serverPassword != old.serverPassword {
             changes.append(isArabic ? "تم تغيير كلمة مرور السيرفر" : "Server password updated")
