@@ -13,10 +13,8 @@ struct ContentView: View {
                 
                 ScrollView {
                     VStack(spacing: 20) {
-                        // بطاقة موارد Oracle المجانية
                         resourceHeaderCard
                         
-                        // القسم 1: جميع السيرفرات اللي مسويها
                         VStack(spacing: 12) {
                             HStack {
                                 Text(store.isArabic ? "سيرفراتي (\(store.servers.count))" : "My Servers (\(store.servers.count))")
@@ -45,7 +43,6 @@ struct ContentView: View {
                             }
                         }
                         
-                        // القسم 2: الألعاب المتاحة اللي تقدر تسوي لها سيرفر بضغطة زر
                         VStack(alignment: .leading, spacing: 12) {
                             Text(store.isArabic ? "ألعاب جاهزة للإنشاء الفوري" : "Available Games to Deploy")
                                 .font(.headline)
