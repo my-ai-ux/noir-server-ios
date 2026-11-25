@@ -8,7 +8,12 @@ struct ServerDetailView: View {
     @State private var selectedTab = 0
     @State private var newModId = ""
     @State private var newModName = ""
+    @State private var modSearchText = ""
     @State private var commandText = ""
+    
+    // تأكيد الحذف مرتين للمالك فقط
+    @State private var showFirstDeleteAlert = false
+    @State private var showSecondDeleteAlert = false
     
     var serverIndex: Int? {
         store.servers.firstIndex(where: { $0.id == serverId })
@@ -20,21 +25,21 @@ struct ServerDetailView: View {
             ZStack {
                 Color(red: 0.05, green: 0.05, blue: 0.07).ignoresSafeArea()
                 
-                VStack(spacing: 14) {
+                VStack(spacing: 12) {
                     serverInfoAndPowerCard(server: server)
                     
                     Picker("", selection: $selectedTab) {
-                        Text(store.isArabic ? "إعدادات Nitrado" : "Nitrado Config").tag(0)
-                        Text(store.isArabic ? "المودات (\(server.config.mods.count))" : "Mods (\(server.config.mods.count))").tag(1)
+                        Text(store.isArabic ? "كافة الإعدادات" : "All Settings").tag(0)
+                        Text(store.isArabic ? "المودات والمتجر" : "Mods & Store").tag(1)
                         Text(store.isArabic ? "الكونسول" : "Console").tag(2)
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
                     
                     if selectedTab == 0 {
-                        nitradoDynamicConfigView(index: idx, game: server.game)
+                        allServerSettingsView(index: idx)
                     } else if selectedTab == 1 {
-                        modsManagerView(index: idx, game: server.game)
+                        modsAndStoreView(index: idx, game: server.game)
                     } else {
                         consoleView(server: server)
                     }
@@ -43,21 +48,42 @@ struct ServerDetailView: View {
             .navigationTitle(server.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(role: .destructive) {
-                        store.deleteServer(serverId: server.id)
-                        dismiss()
-                    } label: {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red)
+                // زر الحذف يظهر للمالك فقط
+                if store.isOwner {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(role: .destructive) {
+                            showFirstDeleteAlert = true
+                        } label: {
+                            Image(systemName: "trash.fill")
+                                .foregroundColor(.red)
+                        }
                     }
                 }
+            }
+            // التنبيه الأول للحذف
+            .alert(store.isArabic ? "هل أنت متأكد؟" : "Are you sure?", isPresented: $showFirstDeleteAlert) {
+                Button(store.isArabic ? "نعم، متابعة" : "Yes, Continue", role: .destructive) {
+                    showSecondDeleteAlert = true
+                }
+                Button(store.isArabic ? "إلغاء" : "Cancel", role: .cancel) {}
+            } message: {
+                Text(store.isArabic ? "أنت على وشك حذف سيرفر (\(server.name))." : "You are about to delete \(server.name).")
+            }
+            // التنبيه الثاني النهائي للحذف
+            .alert(store.isArabic ? "تأكيد نهائي: هل أنت متأكد فعلاً؟" : "Final Confirmation: Are you really sure?", isPresented: $showSecondDeleteAlert) {
+                Button(store.isArabic ? "حذف السيرفر نهائياً" : "Delete Permanently", role: .destructive) {
+                    store.deleteServer(serverId: server.id)
+                    dismiss()
+                }
+                Button(store.isArabic ? "تراجع" : "Cancel", role: .cancel) {}
+            } message: {
+                Text(store.isArabic ? "سيتم مسح جميع ملفات السيرفر والعالم والمودات ولن تتمكن من استرجاعها أبداً!" : "All world saves and mods will be permanently erased!")
             }
         }
     }
     
     func serverInfoAndPowerCard(server: GameServer) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(server.game.rawValue)
@@ -82,22 +108,22 @@ struct ServerDetailView: View {
                 }
             }
             
-            HStack(spacing: 12) {
-                StatPill(title: "CPU", value: "\(Int(server.cpuUsage))%")
-                StatPill(title: "RAM", value: "\(String(format: "%.1f", server.ramUsedGB))/\(Int(server.ramTotalGB))GB")
-                StatPill(title: store.isArabic ? "اللاعبين" : "PLAYERS", value: "\(server.playersOnline)/\(server.config.maxPlayers)")
-            }
-            
-            HStack(spacing: 10) {
-                PowerButton(title: store.isArabic ? "تشغيل" : "Start", icon: "play.fill", color: .green) {
-                    store.sendPowerAction(serverId: server.id, action: "start")
+            if store.canPower {
+                HStack(spacing: 10) {
+                    PowerButton(title: store.isArabic ? "تشغيل" : "Start", icon: "play.fill", color: .green) {
+                        store.sendPowerAction(serverId: server.id, action: "start")
+                    }
+                    PowerButton(title: store.isArabic ? "إعادة تشغيل" : "Restart", icon: "arrow.clockwise", color: .amberGold) {
+                        store.sendPowerAction(serverId: server.id, action: "restart")
+                    }
+                    PowerButton(title: store.isArabic ? "إيقاف" : "Stop", icon: "stop.fill", color: .red) {
+                        store.sendPowerAction(serverId: server.id, action: "stop")
+                    }
                 }
-                PowerButton(title: store.isArabic ? "إعادة تشغيل" : "Restart", icon: "arrow.clockwise", color: .amberGold) {
-                    store.sendPowerAction(serverId: server.id, action: "restart")
-                }
-                PowerButton(title: store.isArabic ? "إيقاف" : "Stop", icon: "stop.fill", color: .red) {
-                    store.sendPowerAction(serverId: server.id, action: "stop")
-                }
+            } else {
+                Text(store.isArabic ? "🔒 التحكم بالتشغيل مقيد من قبل المالك" : "🔒 Power control restricted by Owner")
+                    .font(.caption)
+                    .foregroundColor(.gray)
             }
         }
         .padding()
@@ -106,145 +132,245 @@ struct ServerDetailView: View {
         .padding(.horizontal)
     }
     
-    func nitradoDynamicConfigView(index: Int, game: GameType) -> some View {
-        let labels = getGameRateLabels(game: game, isArabic: store.isArabic)
-        return ScrollView {
-            VStack(spacing: 14) {
-                RateSliderCard(title: labels.0, value: $store.servers[index].config.primaryRate, range: 1...50)
-                RateSliderCard(title: labels.1, value: $store.servers[index].config.secondaryRate, range: 1...50)
-                RateSliderCard(title: labels.2, value: $store.servers[index].config.xpMultiplier, range: 1...30)
-                RateSliderCard(title: labels.3, value: $store.servers[index].config.thirdRate, range: 1...100)
-                RateSliderCard(title: labels.4, value: $store.servers[index].config.weightOrSlots, range: 1...50)
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(store.isArabic ? "كلمة مرور السيرفر (اختياري)" : "Server Password (Optional)")
+    // كافة إعدادات السيرفر الشاملة (المعدلات، التفريخ، اللاعبين، قوانين العالم)
+    func allServerSettingsView(index: Int) -> some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                if !store.canEdit {
+                    Text(store.isArabic ? "🔒 وضع القراءة فقط: المالك قيّد تعديل الإعدادات لحسابك" : "🔒 Read-only mode: Editing restricted by Owner")
                         .font(.caption.bold())
-                        .foregroundColor(.gray)
-                    TextField(store.isArabic ? "اتركه فارغاً ليكون عام" : "Leave empty for public", text: $store.servers[index].config.serverPassword)
+                        .foregroundColor(.amberGold)
                         .padding(10)
-                        .background(Color.black.opacity(0.4))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .padding()
-                .background(Color(red: 0.10, green: 0.10, blue: 0.13))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                
-                Toggle(isOn: $store.servers[index].config.pvpEnabled) {
-                    Text(store.isArabic ? "تفعيل القتال بين اللاعبين (PvP)" : "Enable PvP")
-                        .foregroundColor(.white)
-                }
-                .tint(.amberGold)
-                .padding()
-                .background(Color(red: 0.10, green: 0.10, blue: 0.13))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                
-                Button {
-                    store.applyNitradoConfig(serverId: serverId, config: store.servers[index].config)
-                } label: {
-                    Text(store.isArabic ? "حفظ الإعدادات وتطبيقها" : "Save & Apply Settings")
-                        .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.amberGold)
-                        .foregroundColor(.black)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .background(Color.amberGold.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                
+                Group {
+                    SectionHeader(title: store.isArabic ? "1. المعدلات الأساسية والموارد" : "1. Core Rates & Resources")
+                    RateSliderCard(title: store.isArabic ? "مضاعف التجميع (Harvest)" : "Harvest Amount", value: $store.servers[index].config.harvestMultiplier, range: 1...100)
+                    RateSliderCard(title: store.isArabic ? "سرعة الترويض (Taming)" : "Taming Speed", value: $store.servers[index].config.tamingSpeed, range: 1...100)
+                    RateSliderCard(title: store.isArabic ? "مضاعف الخبرة (XP)" : "XP Multiplier", value: $store.servers[index].config.xpMultiplier, range: 1...50)
+                    RateSliderCard(title: store.isArabic ? "جودة اللوت والصناديق (Loot Quality)" : "Loot Quality", value: $store.servers[index].config.lootQuality, range: 1...10)
+                    RateSliderCard(title: store.isArabic ? "تكديس الموارد (Stack Size)" : "Stack Size Multiplier", value: $store.servers[index].config.stackSizeMultiplier, range: 1...50)
+                }
+                .disabled(!store.canEdit)
+                
+                Group {
+                    SectionHeader(title: store.isArabic ? "2. التفريخ والتربية (Breeding)" : "2. Breeding & Maturation")
+                    RateSliderCard(title: store.isArabic ? "سرعة فقس البيض (Egg Hatch)" : "Egg Hatch Speed", value: $store.servers[index].config.eggHatchSpeed, range: 1...100)
+                    RateSliderCard(title: store.isArabic ? "سرعة نمو الصغار (Baby Mature)" : "Baby Mature Speed", value: $store.servers[index].config.babyMatureSpeed, range: 1...100)
+                    RateSliderCard(title: store.isArabic ? "مضاعف البصمة (Imprinting)" : "Imprint Multiplier", value: $store.servers[index].config.babyImprintMultiplier, range: 1...20)
+                }
+                .disabled(!store.canEdit)
+                
+                Group {
+                    SectionHeader(title: store.isArabic ? "3. إحصائيات اللاعب والديناصورات" : "3. Player & Dino Stats")
+                    RateSliderCard(title: store.isArabic ? "وزن اللاعب (Player Weight)" : "Player Weight", value: $store.servers[index].config.playerWeight, range: 1...100)
+                    RateSliderCard(title: store.isArabic ? "صحة اللاعب (Player Health)" : "Player Health", value: $store.servers[index].config.playerHealth, range: 1...20)
+                    RateSliderCard(title: store.isArabic ? "طاقة اللاعب (Player Stamina)" : "Player Stamina", value: $store.servers[index].config.playerStamina, range: 1...20)
+                    RateSliderCard(title: store.isArabic ? "سرعة اللاعب (Player Speed)" : "Player Speed", value: $store.servers[index].config.playerSpeed, range: 1...10)
+                    RateSliderCard(title: store.isArabic ? "وزن الديناصورات (Dino Weight)" : "Dino Weight", value: $store.servers[index].config.dinoWeight, range: 1...100)
+                    RateSliderCard(title: store.isArabic ? "ضرر الديناصورات (Dino Damage)" : "Dino Damage", value: $store.servers[index].config.dinoDamage, range: 1...20)
+                }
+                .disabled(!store.canEdit)
+                
+                Group {
+                    SectionHeader(title: store.isArabic ? "4. قوانين العالم والبيئة والحماية" : "4. World Rules & Security")
+                    RateSliderCard(title: store.isArabic ? "سرعة النهار (Day Speed)" : "Day Speed", value: $store.servers[index].config.dayTimeSpeed, range: 0.1...5)
+                    RateSliderCard(title: store.isArabic ? "سرعة الليل (Night Speed)" : "Night Speed", value: $store.servers[index].config.nightTimeSpeed, range: 0.1...10)
+                    RateSliderCard(title: store.isArabic ? "استهلاك الأكل (Food Drain)" : "Food Drain", value: $store.servers[index].config.playerFoodDrain, range: 0.1...3)
+                    
+                    ToggleRow(title: store.isArabic ? "تفعيل القتال بين اللاعبين (PvP)" : "Enable PvP", isOn: $store.servers[index].config.pvpEnabled)
+                    ToggleRow(title: store.isArabic ? "السماح بالطيران داخل الكهوف" : "Allow Cave Flyers", isOn: $store.servers[index].config.allowCaveFlyers)
+                    ToggleRow(title: store.isArabic ? "إظهار موقع اللاعب على الخريطة" : "Show Player on Map", isOn: $store.servers[index].config.showMapPlayerLocation)
+                    ToggleRow(title: store.isArabic ? "تفعيل المنظور الثالث (Third Person)" : "Allow Third Person", isOn: $store.servers[index].config.allowThirdPerson)
+                    ToggleRow(title: store.isArabic ? "منع تحلل المباني تلقائياً" : "Disable Structure Decay", isOn: $store.servers[index].config.disableStructureDecay)
+                    
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(store.isArabic ? "كلمة مرور السيرفر (اتركها فارغة للعام)" : "Server Password")
+                            .font(.caption.bold()).foregroundColor(.gray)
+                        TextField("Password...", text: $store.servers[index].config.serverPassword)
+                            .padding(10).background(Color.black.opacity(0.4)).clipShape(RoundedRectangle(cornerRadius: 8))
+                        
+                        Text(store.isArabic ? "رسالة الترحيب عند الدخول (MOTD)" : "Message of the Day")
+                            .font(.caption.bold()).foregroundColor(.gray)
+                        TextField("MOTD...", text: $store.servers[index].config.motdMessage)
+                            .padding(10).background(Color.black.opacity(0.4)).clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .padding()
+                    .background(Color(red: 0.10, green: 0.10, blue: 0.13))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(!store.canEdit)
+                
+                if store.canEdit {
+                    Button {
+                        store.applyFullConfig(serverId: serverId, config: store.servers[index].config)
+                    } label: {
+                        Text(store.isArabic ? "حفظ وتطبيق كافة الإعدادات" : "Save & Apply All Settings")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.amberGold)
+                            .foregroundColor(.black)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
                 }
             }
             .padding()
         }
     }
     
-    func getGameRateLabels(game: GameType, isArabic: Bool) -> (String, String, String, String, String) {
-        switch game {
-        case .arkAscended:
-            return isArabic
-                ? ("مضاعف التجميع (Harvest)", "سرعة الترويض (Taming)", "مضاعف الخبرة (XP)", "سرعة نمو الصغار (Maturation)", "وزن اللاعب (Player Weight)")
-                : ("Harvest Multiplier", "Taming Speed", "XP Multiplier", "Baby Mature Speed", "Player Weight")
-        case .minecraft:
-            return isArabic
-                ? ("مستوى الصعوبة (Difficulty)", "مسافة الرؤية (View Distance)", "مضاعف الخبرة (XP)", "سرعة نمو المحاصيل (Tick Speed)", "سعة المخزن (Slots)")
-                : ("Difficulty Level", "View Distance", "XP Multiplier", "Random Tick Speed", "Storage Multiplier")
-        case .rust:
-            return isArabic
-                ? ("مضاعف الموارد (Gather Rate)", "معدل الصهر (Smelting)", "سرعة الكرافت (Crafting)", "حجم التكديس (Stack Size)", "معدل اللوت (Loot Rate)")
-                : ("Gather Rate", "Smelting Speed", "Crafting Speed", "Stack Multiplier", "Loot Multiplier")
-        default:
-            return isArabic
-                ? ("معدل جمع الموارد", "سرعة التطوير والصيد", "مضاعف الخبرة (XP)", "سرعة البناء والإنتاج", "سعة الحمولة")
-                : ("Resource Rate", "Capture/Craft Speed", "XP Multiplier", "Build Speed", "Carry Capacity")
+    // صفحة المودات + متجر مودات ARK المترجم بالعربية
+    func modsAndStoreView(index: Int, game: GameType) -> some View {
+        let filteredCatalog = store.arkModsCatalog.filter {
+            modSearchText.isEmpty || $0.name.localizedCaseInsensitiveContains(modSearchText) || $0.arabicDescription.contains(modSearchText)
         }
-    }
-    
-    func modsManagerView(index: Int, game: GameType) -> some View {
-        ScrollView {
-            VStack(spacing: 14) {
-                VStack(spacing: 10) {
-                    Text(store.isArabic ? "إضافة مود / بلوقن (\(game.modSourceLabel))" : "Add Mod (\(game.modSourceLabel))")
-                        .font(.subheadline.bold())
-                        .foregroundColor(.amberGold)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+        
+        return ScrollView {
+            VStack(spacing: 16) {
+                // المودات المثبتة حالياً
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(store.isArabic ? "المودات المثبتة على السيرفر (\(store.servers[index].config.mods.count))" : "Installed Mods (\(store.servers[index].config.mods.count))")
+                        .font(.headline)
+                        .foregroundColor(.white)
                     
-                    TextField(store.isArabic ? "معرّف المود (مثال: 928793)" : "Mod ID / Name", text: $newModId)
-                        .padding(10)
-                        .background(Color.black.opacity(0.4))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    
-                    TextField(store.isArabic ? "اسم المود (اختياري)" : "Mod Title (Optional)", text: $newModName)
-                        .padding(10)
-                        .background(Color.black.opacity(0.4))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    
-                    Button {
-                        guard !newModId.isEmpty else { return }
-                        let mod = GameMod(
-                            modId: newModId.trimmingCharacters(in: .whitespaces),
-                            name: newModName.isEmpty ? "Mod #\(newModId)" : newModName
-                        )
-                        store.servers[index].config.mods.append(mod)
-                        store.applyNitradoConfig(serverId: serverId, config: store.servers[index].config)
-                        newModId = ""
-                        newModName = ""
-                    } label: {
-                        Label(store.isArabic ? "تثبيت المود على السيرفر" : "Install Mod", systemImage: "plus.app.fill")
-                            .font(.subheadline.bold())
-                            .frame(maxWidth: .infinity)
-                            .padding(10)
-                            .background(Color.amberGold)
-                            .foregroundColor(.black)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    ForEach(store.servers[index].config.mods.indices, id: \.self) { mIdx in
+                        let mod = store.servers[index].config.mods[mIdx]
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(mod.name)
+                                        .font(.subheadline.bold())
+                                        .foregroundColor(.white)
+                                    Text("ID: \(mod.modId)")
+                                        .font(.caption2.monospaced())
+                                        .foregroundColor(.amberGold)
+                                }
+                                Spacer()
+                                if store.canMods {
+                                    Toggle("", isOn: $store.servers[index].config.mods[mIdx].isEnabled)
+                                        .labelsHidden()
+                                        .tint(.amberGold)
+                                    Button {
+                                        store.servers[index].config.mods.remove(at: mIdx)
+                                        store.applyFullConfig(serverId: serverId, config: store.servers[index].config)
+                                    } label: {
+                                        Image(systemName: "trash").foregroundColor(.red)
+                                    }
+                                    .padding(.leading, 8)
+                                }
+                            }
+                            if !mod.arabicDescription.isEmpty {
+                                Text(mod.arabicDescription)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding()
+                        .background(Color(red: 0.10, green: 0.10, blue: 0.13))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
-                .padding()
-                .background(Color(red: 0.10, green: 0.10, blue: 0.13))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
                 
-                ForEach(store.servers[index].config.mods.indices, id: \.self) { mIdx in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(store.servers[index].config.mods[mIdx].name)
-                                .font(.subheadline.bold())
-                                .foregroundColor(.white)
-                            Text("ID: \(store.servers[index].config.mods[mIdx].modId)")
-                                .font(.caption.monospaced())
-                                .foregroundColor(.gray)
+                // إضافة مود يدوي بالرقم
+                if store.canMods {
+                    VStack(spacing: 10) {
+                        Text(store.isArabic ? "إضافة مود يدوي برقم ID" : "Add Custom Mod by ID")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.amberGold)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        HStack {
+                            TextField(store.isArabic ? "رقم المود (Mod ID)" : "Mod ID", text: $newModId)
+                                .padding(10).background(Color.black.opacity(0.4)).clipShape(RoundedRectangle(cornerRadius: 8))
+                            TextField(store.isArabic ? "اسم المود" : "Mod Name", text: $newModName)
+                                .padding(10).background(Color.black.opacity(0.4)).clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        Spacer()
-                        Toggle("", isOn: $store.servers[index].config.mods[mIdx].isEnabled)
-                            .labelsHidden()
-                            .tint(.amberGold)
                         
                         Button {
-                            store.servers[index].config.mods.remove(at: mIdx)
-                            store.applyNitradoConfig(serverId: serverId, config: store.servers[index].config)
+                            guard !newModId.isEmpty else { return }
+                            let mod = GameMod(
+                                modId: newModId.trimmingCharacters(in: .whitespaces),
+                                name: newModName.isEmpty ? "Custom Mod #\(newModId)" : newModName,
+                                arabicDescription: store.isArabic ? "مود مضاف يدوياً برقم المعرّف." : "Manually added mod."
+                            )
+                            store.servers[index].config.mods.append(mod)
+                            store.applyFullConfig(serverId: serverId, config: store.servers[index].config)
+                            newModId = ""
+                            newModName = ""
                         } label: {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red)
+                            Label(store.isArabic ? "تثبيت المود اليدوي" : "Install Custom Mod", systemImage: "plus.circle.fill")
+                                .font(.subheadline.bold())
+                                .frame(maxWidth: .infinity)
+                                .padding(10)
+                                .background(Color.amberGold)
+                                .foregroundColor(.black)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        .padding(.leading, 8)
                     }
                     .padding()
                     .background(Color(red: 0.10, green: 0.10, blue: 0.13))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                
+                // متجر مودات ARK الجاهزة مع الوصف المترجم بالعربي
+                if game == .arkAscended {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(store.isArabic ? "متجر مودات ARK (مترجم بالعربي)" : "ARK Mods Store")
+                            .font(.headline)
+                            .foregroundColor(.amberGold)
+                        
+                        TextField(store.isArabic ? "ابحث في المتجر بالاسم أو الوصف العربي..." : "Search ARK mods...", text: $modSearchText)
+                            .padding(10)
+                            .background(Color(red: 0.12, green: 0.12, blue: 0.15))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        
+                        ForEach(filteredCatalog) { item in
+                            let alreadyInstalled = store.servers[index].config.mods.contains(where: { $0.modId == item.id })
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.name)
+                                            .font(.subheadline.bold())
+                                            .foregroundColor(.white)
+                                        Text("\(item.category) • ID: \(item.id)")
+                                            .font(.caption2)
+                                            .foregroundColor(.amberGold)
+                                    }
+                                    Spacer()
+                                    if store.canMods {
+                                        Button {
+                                            if !alreadyInstalled {
+                                                let mod = GameMod(modId: item.id, name: item.name, arabicDescription: item.arabicDescription)
+                                                store.servers[index].config.mods.append(mod)
+                                                store.applyFullConfig(serverId: serverId, config: store.servers[index].config)
+                                            }
+                                        } label: {
+                                            Text(alreadyInstalled ? (store.isArabic ? "مثبّت ✓" : "Installed ✓") : (store.isArabic ? "تثبيت +" : "Install +"))
+                                                .font(.caption.bold())
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 6)
+                                                .background(alreadyInstalled ? Color.green.opacity(0.2) : Color.amberGold)
+                                                .foregroundColor(alreadyInstalled ? .green : .black)
+                                                .clipShape(Capsule())
+                                        }
+                                        .disabled(alreadyInstalled)
+                                    }
+                                }
+                                
+                                Text(store.isArabic ? item.arabicDescription : item.englishDescription)
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding()
+                            .background(Color(red: 0.10, green: 0.10, blue: 0.13))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                    }
                 }
             }
             .padding()
@@ -268,27 +394,61 @@ struct ServerDetailView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal)
             
-            HStack {
-                TextField(store.isArabic ? "اكتب أمر السيرفر (مثال: saveworld)" : "Enter command...", text: $commandText)
-                    .autocapitalization(.none)
-                    .padding(10)
-                    .background(Color(red: 0.12, green: 0.12, blue: 0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                
-                Button {
-                    store.sendCommand(serverId: server.id, command: commandText)
-                    commandText = ""
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                        .padding(12)
-                        .background(Color.amberGold)
-                        .foregroundColor(.black)
+            if store.canConsole {
+                HStack {
+                    TextField(store.isArabic ? "اكتب أمر السيرفر (مثال: saveworld)" : "Enter command...", text: $commandText)
+                        .autocapitalization(.none)
+                        .padding(10)
+                        .background(Color(red: 0.12, green: 0.12, blue: 0.15))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
+                    
+                    Button {
+                        store.sendCommand(serverId: server.id, command: commandText)
+                        commandText = ""
+                    } label: {
+                        Image(systemName: "paperplane.fill")
+                            .padding(12)
+                            .background(Color.amberGold)
+                            .foregroundColor(.black)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
                 }
+                .padding(.horizontal)
+                .padding(.bottom, 10)
+            } else {
+                Text(store.isArabic ? "🔒 إرسال الأوامر مقيد من قبل المالك" : "🔒 Console commands restricted by Owner")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .padding(.bottom, 10)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 10)
         }
+    }
+}
+
+struct SectionHeader: View {
+    let title: String
+    var body: some View {
+        Text(title)
+            .font(.subheadline.bold())
+            .foregroundColor(.amberGold)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
+    }
+}
+
+struct ToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.white)
+        }
+        .tint(.amberGold)
+        .padding()
+        .background(Color(red: 0.10, green: 0.10, blue: 0.13))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
