@@ -5,75 +5,172 @@ struct ServerDetailView: View {
     @Environment(\.dismiss) var dismiss
     let serverId: String
     
+    // نسخة مسودة للتعديلات بحيث تظهر التعديلات ويطلب الحفظ
+    @State private var draftConfig: FullServerConfig = FullServerConfig()
+    @State private var hasLoadedDraft: Bool = false
+    @State private var showReviewSaveSheet: Bool = false
+    
     @State private var selectedTab = 0
     @State private var newModId = ""
     @State private var newModName = ""
     @State private var modSearchText = ""
+    @State private var selectedModCategory = "الكل"
     @State private var commandText = ""
     
     @State private var showFirstDeleteAlert = false
     @State private var showSecondDeleteAlert = false
     
-    var serverIndex: Int? {
-        store.servers.firstIndex(where: { $0.id == serverId })
+    var currentServer: GameServer? {
+        store.servers.first(where: { $0.id == serverId })
+    }
+    
+    var pendingChanges: [String] {
+        guard let saved = currentServer?.config else { return [] }
+        return draftConfig.diffSummary(comparedTo: saved, isArabic: store.isArabic)
     }
     
     var body: some View {
-        if let idx = serverIndex {
-            let server = store.servers[idx]
-            ZStack {
-                Color.appBg.ignoresSafeArea()
-                
-                VStack(spacing: 12) {
-                    serverHeaderCard(server: server)
+        Group {
+            if let server = currentServer {
+                ZStack(alignment: .bottom) {
+                    Color.appBg.ignoresSafeArea()
                     
-                    Picker("", selection: $selectedTab) {
-                        Text(store.isArabic ? "إعدادات \(server.game.shortBadge)" : "\(server.game.shortBadge) Settings").tag(0)
-                        Text(store.isArabic ? "المودات والمتجر" : "Mods Store").tag(1)
-                        Text(store.isArabic ? "الكونسول" : "Console").tag(2)
+                    VStack(spacing: 12) {
+                        // شريط تحذير إعادة التشغيل بعد 20 ثانية داخل السيرفر
+                        if store.restartingServerId == server.id && store.restartCountdown > 0 {
+                            HStack(spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.black)
+                                Text(store.isArabic
+                                     ? "تنبيه داخل السيرفر: بعد \(store.restartCountdown) ثانية سيسوي السيرفر إعادة تشغيل!"
+                                     : "Server Notice: Restarting in \(store.restartCountdown)s...")
+                                    .font(.caption.bold())
+                                    .foregroundColor(.black)
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(Color.yellow)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal)
+                        }
+                        
+                        serverHeaderCard(server: server)
+                        
+                        Picker("", selection: $selectedTab) {
+                            Text(store.isArabic ? "إعدادات \(server.game.shortBadge)" : "\(server.game.shortBadge) Settings").tag(0)
+                            Text(store.isArabic ? "المودات (\(draftConfig.mods.count))" : "Mods (\(draftConfig.mods.count))").tag(1)
+                            Text(store.isArabic ? "الكونسول" : "Console").tag(2)
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal)
+                        
+                        if selectedTab == 0 {
+                            gameSpecificSettingsView(game: server.game)
+                        } else if selectedTab == 1 {
+                            modsAndStoreView(game: server.game)
+                        } else {
+                            consoleView(server: server)
+                        }
                     }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal)
                     
-                    if selectedTab == 0 {
-                        gameSpecificSettingsView(index: idx, game: server.game)
-                    } else if selectedTab == 1 {
-                        modsAndStoreView(index: idx, game: server.game)
-                    } else {
-                        consoleView(server: server)
+                    // شريط الحفظ العائم يظهر تلقائياً عند وجود أي تعديل غير محفوظ
+                    if !pendingChanges.isEmpty && store.canEdit {
+                        VStack(spacing: 6) {
+                            Button {
+                                showReviewSaveSheet = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "checkmark.shield.fill")
+                                        .font(.title3)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(store.isArabic ? "لديك (\(pendingChanges.count)) تعديلات غير محفوظة" : "You have (\(pendingChanges.count)) unsaved changes")
+                                            .font(.subheadline.bold())
+                                        Text(store.isArabic ? "اضغط لمراجعة التعديلات وحفظها في السيرفر" : "Tap to review & save changes")
+                                            .font(.caption2)
+                                    }
+                                    Spacer()
+                                    Text(store.isArabic ? "حفظ" : "Save")
+                                        .font(.subheadline.bold())
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 6)
+                                        .background(Color.black.opacity(0.25))
+                                        .clipShape(Capsule())
+                                }
+                                .padding()
+                                .background(LinearGradient(colors: [.electricCyan, .neonViolet], startPoint: .leading, endPoint: .trailing))
+                                .foregroundColor(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .shadow(radius: 10)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 10)
                     }
                 }
-            }
-            .navigationTitle(server.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if store.isOwner {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(role: .destructive) {
-                            showFirstDeleteAlert = true
-                        } label: {
-                            Image(systemName: "trash.fill")
-                                .foregroundColor(.red)
+                .onAppear {
+                    if !hasLoadedDraft {
+                        draftConfig = server.config
+                        hasLoadedDraft = true
+                    }
+                }
+                .navigationTitle(server.name)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    if store.isOwner {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button(role: .destructive) {
+                                showFirstDeleteAlert = true
+                            } label: {
+                                Image(systemName: "trash.fill")
+                                    .foregroundColor(.red)
+                            }
                         }
                     }
                 }
-            }
-            .alert(store.isArabic ? "هل أنت متأكد؟" : "Are you sure?", isPresented: $showFirstDeleteAlert) {
-                Button(store.isArabic ? "نعم، متابعة" : "Yes, Continue", role: .destructive) {
-                    showSecondDeleteAlert = true
+                // نافذة مراجعة التعديلات قبل الحفظ
+                .sheet(isPresented: $showReviewSaveSheet) {
+                    ReviewChangesSheet(
+                        serverName: server.name,
+                        changes: pendingChanges,
+                        isArabic: store.isArabic,
+                        onConfirmSave: {
+                            store.saveConfigAndScheduleRestart(
+                                serverId: server.id,
+                                newConfig: draftConfig,
+                                changesList: pendingChanges
+                            )
+                            showReviewSaveSheet = false
+                        },
+                        onDiscard: {
+                            draftConfig = server.config
+                            showReviewSaveSheet = false
+                        }
+                    )
                 }
-                Button(store.isArabic ? "إلغاء" : "Cancel", role: .cancel) {}
-            } message: {
-                Text(store.isArabic ? "أنت على وشك حذف سيرفر (\(server.name))." : "You are about to delete \(server.name).")
-            }
-            .alert(store.isArabic ? "تأكيد نهائي: هل أنت متأكد فعلاً؟" : "Final Confirmation: Are you really sure?", isPresented: $showSecondDeleteAlert) {
-                Button(store.isArabic ? "حذف السيرفر نهائياً" : "Delete Permanently", role: .destructive) {
-                    store.deleteServer(serverId: server.id)
-                    dismiss()
+                // تأكيد الحذف الأول
+                .alert(store.isArabic ? "هل أنت متأكد؟" : "Are you sure?", isPresented: $showFirstDeleteAlert) {
+                    Button(store.isArabic ? "نعم، متابعة" : "Yes, Continue", role: .destructive) {
+                        showSecondDeleteAlert = true
+                    }
+                    Button(store.isArabic ? "إلغاء" : "Cancel", role: .cancel) {}
+                } message: {
+                    Text(store.isArabic ? "أنت على وشك حذف سيرفر (\(server.name))." : "You are about to delete \(server.name).")
                 }
-                Button(store.isArabic ? "تراجع" : "Cancel", role: .cancel) {}
-            } message: {
-                Text(store.isArabic ? "سيتم مسح السيرفر والعالم والمودات نهائياً ولن يمكنك التراجع!" : "This action cannot be undone!")
+                // تأكيد الحذف الثاني النهائي (آمن بدون كراش)
+                .alert(store.isArabic ? "تأكيد نهائي: هل أنت متأكد فعلاً؟" : "Final Confirmation: Are you really sure?", isPresented: $showSecondDeleteAlert) {
+                    Button(store.isArabic ? "حذف السيرفر نهائياً" : "Delete Permanently", role: .destructive) {
+                        let idToDelete = server.id
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            store.deleteServer(serverId: idToDelete)
+                        }
+                    }
+                    Button(store.isArabic ? "تراجع" : "Cancel", role: .cancel) {}
+                } message: {
+                    Text(store.isArabic ? "سيتم مسح السيرفر والعالم والمودات نهائياً ولن يمكنك التراجع!" : "This action cannot be undone!")
+                }
+            } else {
+                Color.appBg.ignoresSafeArea()
             }
         }
     }
@@ -128,10 +225,7 @@ struct ServerDetailView: View {
         .padding(.horizontal)
     }
     
-    // ---------------------------------------------------------
-    // إعدادات مخصصة وحقيقية لكل لعبة على حدة
-    // ---------------------------------------------------------
-    func gameSpecificSettingsView(index: Int, game: GameType) -> some View {
+    func gameSpecificSettingsView(game: GameType) -> some View {
         ScrollView {
             VStack(spacing: 16) {
                 if !store.canEdit {
@@ -144,17 +238,16 @@ struct ServerDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 
-                // 1. الإعدادات الأساسية والمنصات (مشتركة لكل الألعاب)
                 Group {
                     SettingGroupTitle(title: store.isArabic ? "1. الوصول والمنصات واللاعبين" : "1. Access, Platforms & Players")
                     
                     VStack(spacing: 12) {
-                        Stepper(value: $store.servers[index].config.maxPlayers, in: 2...500, step: 2) {
+                        Stepper(value: $draftConfig.maxPlayers, in: 2...500, step: 2) {
                             HStack {
                                 Text(store.isArabic ? "الحد الأقصى للاعبين" : "Max Players")
                                     .foregroundColor(.white)
                                 Spacer()
-                                Text("\(store.servers[index].config.maxPlayers)")
+                                Text("\(draftConfig.maxPlayers)")
                                     .font(.headline.monospaced())
                                     .foregroundColor(.electricCyan)
                             }
@@ -166,23 +259,23 @@ struct ServerDetailView: View {
                     
                     SettingToggleCard(
                         title: store.isArabic ? "السماح باللعب المشترك (PC + Console / الجوال)" : "Enable Crossplay (PC + Console)",
-                        isOn: $store.servers[index].config.crossplayEnabled
+                        isOn: $draftConfig.crossplayEnabled
                     )
                     
                     SettingToggleCard(
                         title: store.isArabic ? "تفعيل القتال بين اللاعبين (PvP)" : "Enable PvP",
-                        isOn: $store.servers[index].config.pvpEnabled
+                        isOn: $draftConfig.pvpEnabled
                     )
                     
                     VStack(alignment: .leading, spacing: 10) {
                         Text(store.isArabic ? "كلمة مرور السيرفر (اتركها فارغة ليكون عام)" : "Server Password")
                             .font(.caption.bold()).foregroundColor(.gray)
-                        TextField("Password...", text: $store.servers[index].config.serverPassword)
+                        TextField("Password...", text: $draftConfig.serverPassword)
                             .padding(10).background(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 10))
                         
                         Text(store.isArabic ? "رسالة الترحيب (MOTD)" : "MOTD")
                             .font(.caption.bold()).foregroundColor(.gray)
-                        TextField("MOTD...", text: $store.servers[index].config.motdMessage)
+                        TextField("MOTD...", text: $draftConfig.motdMessage)
                             .padding(10).background(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .padding()
@@ -191,56 +284,59 @@ struct ServerDetailView: View {
                 }
                 .disabled(!store.canEdit)
                 
-                // 2. الإعدادات الخاصة بكل لعبة
                 Group {
                     switch game {
                     case .arkAscended:
-                        arkSettingsSection(index: index)
+                        arkSettingsSection()
                     case .minecraft:
-                        minecraftSettingsSection(index: index)
+                        minecraftSettingsSection()
                     case .fivem:
-                        fivemSettingsSection(index: index)
+                        fivemSettingsSection()
                     case .rust:
-                        rustSettingsSection(index: index)
+                        rustSettingsSection()
                     case .palworld:
-                        palworldSettingsSection(index: index)
+                        palworldSettingsSection()
                     case .cs2:
-                        cs2SettingsSection(index: index)
+                        cs2SettingsSection()
                     case .terraria:
-                        terrariaSettingsSection(index: index)
+                        terrariaSettingsSection()
                     case .valheim:
-                        valheimSettingsSection(index: index)
+                        valheimSettingsSection()
                     }
                 }
                 .disabled(!store.canEdit)
                 
+                // زر حفظ ثابت في أسفل الصفحة أيضاً
                 if store.canEdit {
                     Button {
-                        store.applyFullConfig(serverId: serverId, config: store.servers[index].config)
+                        showReviewSaveSheet = true
                     } label: {
-                        Text(store.isArabic ? "حفظ وتطبيق إعدادات \(game.shortBadge)" : "Save \(game.shortBadge) Settings")
+                        Text(pendingChanges.isEmpty
+                             ? (store.isArabic ? "جميع الإعدادات محفوظة ✓" : "All Settings Saved ✓")
+                             : (store.isArabic ? "مراجعة وحفظ التعديلات (\(pendingChanges.count))" : "Review & Save (\(pendingChanges.count))"))
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(LinearGradient(colors: [.electricCyan, .neonViolet], startPoint: .leading, endPoint: .trailing))
-                            .foregroundColor(.white)
+                            .background(pendingChanges.isEmpty ? AnyShapeStyle(Color.white.opacity(0.1)) : AnyShapeStyle(LinearGradient(colors: [.electricCyan, .neonViolet], startPoint: .leading, endPoint: .trailing)))
+                            .foregroundColor(pendingChanges.isEmpty ? .gray : .white)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
+                    .disabled(pendingChanges.isEmpty)
+                    .padding(.bottom, 70)
                 }
             }
             .padding()
         }
     }
     
-    // --- قسم إعدادات ARK: Survival Ascended ---
     @ViewBuilder
-    func arkSettingsSection(index: Int) -> some View {
+    func arkSettingsSection() -> some View {
         SettingGroupTitle(title: store.isArabic ? "2. خريطة ومعدلات ARK Ascended" : "2. ARK Map & Rates")
         
         VStack(alignment: .leading, spacing: 8) {
             Text(store.isArabic ? "الخريطة النشطة (Map)" : "Active Map")
                 .font(.caption.bold()).foregroundColor(.gray)
-            Picker("Map", selection: $store.servers[index].config.mapName) {
+            Picker("Map", selection: $draftConfig.mapName) {
                 Text("The Island").tag("TheIsland_WP")
                 Text("Scorched Earth").tag("ScorchedEarth_WP")
                 Text("The Center").tag("TheCenter_WP")
@@ -255,39 +351,37 @@ struct ServerDetailView: View {
         .background(Color.cardBg)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         
-        CustomRateSlider(title: store.isArabic ? "مضاعف التجميع (Harvest)" : "Harvest", value: $store.servers[index].config.harvestMultiplier, range: 1...100)
-        CustomRateSlider(title: store.isArabic ? "سرعة الترويض (Taming)" : "Taming", value: $store.servers[index].config.tamingSpeed, range: 1...100)
-        CustomRateSlider(title: store.isArabic ? "مضاعف الخبرة (XP)" : "XP", value: $store.servers[index].config.xpMultiplier, range: 1...50)
-        CustomRateSlider(title: store.isArabic ? "جودة اللوت (Loot Quality)" : "Loot Quality", value: $store.servers[index].config.lootQuality, range: 1...10)
-        CustomRateSlider(title: store.isArabic ? "تكديس الموارد (Stack Size)" : "Stack Size", value: $store.servers[index].config.stackSizeMultiplier, range: 1...50)
+        CustomRateSlider(title: store.isArabic ? "مضاعف التجميع (Harvest)" : "Harvest", value: $draftConfig.harvestMultiplier, range: 1...100)
+        CustomRateSlider(title: store.isArabic ? "سرعة الترويض (Taming)" : "Taming", value: $draftConfig.tamingSpeed, range: 1...100)
+        CustomRateSlider(title: store.isArabic ? "مضاعف الخبرة (XP)" : "XP", value: $draftConfig.xpMultiplier, range: 1...50)
+        CustomRateSlider(title: store.isArabic ? "جودة اللوت (Loot Quality)" : "Loot Quality", value: $draftConfig.lootQuality, range: 1...10)
+        CustomRateSlider(title: store.isArabic ? "تكديس الموارد (Stack Size)" : "Stack Size", value: $draftConfig.stackSizeMultiplier, range: 1...50)
         
         SettingGroupTitle(title: store.isArabic ? "3. التفريخ والتربية (Breeding)" : "3. Breeding")
-        CustomRateSlider(title: store.isArabic ? "سرعة فقس البيض (Egg Hatch)" : "Egg Hatch", value: $store.servers[index].config.eggHatchSpeed, range: 1...100)
-        CustomRateSlider(title: store.isArabic ? "سرعة نمو الصغار (Baby Mature)" : "Baby Mature", value: $store.servers[index].config.babyMatureSpeed, range: 1...100)
-        CustomRateSlider(title: store.isArabic ? "مضاعف البصمة (Imprinting)" : "Imprinting", value: $store.servers[index].config.babyImprintMultiplier, range: 1...20)
+        CustomRateSlider(title: store.isArabic ? "سرعة فقس البيض (Egg Hatch)" : "Egg Hatch", value: $draftConfig.eggHatchSpeed, range: 1...100)
+        CustomRateSlider(title: store.isArabic ? "سرعة نمو الصغار (Baby Mature)" : "Baby Mature", value: $draftConfig.babyMatureSpeed, range: 1...100)
+        CustomRateSlider(title: store.isArabic ? "مضاعف البصمة (Imprinting)" : "Imprinting", value: $draftConfig.babyImprintMultiplier, range: 1...20)
         
         SettingGroupTitle(title: store.isArabic ? "4. إحصائيات اللاعب والديناصورات والقوانين" : "4. Stats & World Rules")
-        CustomRateSlider(title: store.isArabic ? "وزن اللاعب (Player Weight)" : "Player Weight", value: $store.servers[index].config.playerWeight, range: 1...100)
-        CustomRateSlider(title: store.isArabic ? "وزن الديناصورات (Dino Weight)" : "Dino Weight", value: $store.servers[index].config.dinoWeight, range: 1...100)
-        CustomRateSlider(title: store.isArabic ? "ضرر الديناصورات (Dino Damage)" : "Dino Damage", value: $store.servers[index].config.dinoDamage, range: 1...20)
+        CustomRateSlider(title: store.isArabic ? "وزن اللاعب (Player Weight)" : "Player Weight", value: $draftConfig.playerWeight, range: 1...100)
+        CustomRateSlider(title: store.isArabic ? "وزن الديناصورات (Dino Weight)" : "Dino Weight", value: $draftConfig.dinoWeight, range: 1...100)
+        CustomRateSlider(title: store.isArabic ? "ضرر الديناصورات (Dino Damage)" : "Dino Damage", value: $draftConfig.dinoDamage, range: 1...20)
         
-        SettingToggleCard(title: store.isArabic ? "السماح بالطيران داخل الكهوف" : "Allow Cave Flyers", isOn: $store.servers[index].config.allowCaveFlyers)
-        SettingToggleCard(title: store.isArabic ? "إظهار موقع اللاعب على الخريطة" : "Show Player on Map", isOn: $store.servers[index].config.showMapPlayerLocation)
-        SettingToggleCard(title: store.isArabic ? "تفعيل المنظور الثالث" : "Allow Third Person", isOn: $store.servers[index].config.allowThirdPerson)
-        SettingToggleCard(title: store.isArabic ? "منع تحلل المباني تلقائياً" : "Disable Structure Decay", isOn: $store.servers[index].config.disableStructureDecay)
-        SettingToggleCard(title: store.isArabic ? "حماية الغش (BattlEye)" : "Enable BattlEye", isOn: $store.servers[index].config.allowBattlEye)
+        SettingToggleCard(title: store.isArabic ? "السماح بالطيران داخل الكهوف" : "Allow Cave Flyers", isOn: $draftConfig.allowCaveFlyers)
+        SettingToggleCard(title: store.isArabic ? "إظهار موقع اللاعب على الخريطة" : "Show Player on Map", isOn: $draftConfig.showMapPlayerLocation)
+        SettingToggleCard(title: store.isArabic ? "تفعيل المنظور الثالث" : "Allow Third Person", isOn: $draftConfig.allowThirdPerson)
+        SettingToggleCard(title: store.isArabic ? "منع تحلل المباني تلقائياً" : "Disable Structure Decay", isOn: $draftConfig.disableStructureDecay)
+        SettingToggleCard(title: store.isArabic ? "حماية الغش (BattlEye)" : "Enable BattlEye", isOn: $draftConfig.allowBattlEye)
     }
     
-    // --- قسم إعدادات Minecraft ---
     @ViewBuilder
-    func minecraftSettingsSection(index: Int) -> some View {
+    func minecraftSettingsSection() -> some View {
         SettingGroupTitle(title: store.isArabic ? "2. إعدادات عالم Minecraft" : "2. Minecraft World Settings")
-        
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(store.isArabic ? "وضع اللعب (Gamemode)" : "Gamemode").foregroundColor(.white)
+                Text(store.isArabic ? "وضع اللعب" : "Gamemode").foregroundColor(.white)
                 Spacer()
-                Picker("", selection: $store.servers[index].config.mcGameMode) {
+                Picker("", selection: $draftConfig.mcGameMode) {
                     Text("Survival").tag("survival")
                     Text("Creative").tag("creative")
                     Text("Adventure").tag("adventure")
@@ -297,9 +391,9 @@ struct ServerDetailView: View {
             }
             Divider().background(Color.white.opacity(0.1))
             HStack {
-                Text(store.isArabic ? "مستوى الصعوبة (Difficulty)" : "Difficulty").foregroundColor(.white)
+                Text(store.isArabic ? "مستوى الصعوبة" : "Difficulty").foregroundColor(.white)
                 Spacer()
-                Picker("", selection: $store.servers[index].config.mcDifficulty) {
+                Picker("", selection: $draftConfig.mcDifficulty) {
                     Text("Peaceful").tag("peaceful")
                     Text("Easy").tag("easy")
                     Text("Normal").tag("normal")
@@ -308,215 +402,106 @@ struct ServerDetailView: View {
                 .tint(.electricCyan)
             }
         }
-        .padding()
-        .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding().background(Color.cardBg).clipShape(RoundedRectangle(cornerRadius: 14))
         
-        VStack(spacing: 12) {
-            Stepper(value: $store.servers[index].config.mcViewDistance, in: 4...32) {
-                HStack {
-                    Text(store.isArabic ? "مسافة الرؤية (View Distance)" : "View Distance").foregroundColor(.white)
-                    Spacer()
-                    Text("\(store.servers[index].config.mcViewDistance) Chunks").foregroundColor(.electricCyan)
-                }
-            }
-            Divider().background(Color.white.opacity(0.1))
-            Stepper(value: $store.servers[index].config.mcSpawnProtection, in: 0...64, step: 4) {
-                HStack {
-                    Text(store.isArabic ? "حماية منطقة البداية (Spawn)" : "Spawn Protection").foregroundColor(.white)
-                    Spacer()
-                    Text("\(store.servers[index].config.mcSpawnProtection)").foregroundColor(.electricCyan)
-                }
-            }
-        }
-        .padding()
-        .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        
-        SettingToggleCard(title: store.isArabic ? "السماح بالحسابات المكركة (Offline Mode)" : "Allow Cracked Accounts (Offline Mode)", isOn: Binding(
-            get: { !store.servers[index].config.mcOnlineMode },
-            set: { store.servers[index].config.mcOnlineMode = !$0 }
+        SettingToggleCard(title: store.isArabic ? "السماح بالحسابات المكركة (Offline Mode)" : "Allow Cracked Accounts", isOn: Binding(
+            get: { !draftConfig.mcOnlineMode },
+            set: { draftConfig.mcOnlineMode = !$0 }
         ))
-        SettingToggleCard(title: store.isArabic ? "تفعيل عالم النذر (Allow Nether)" : "Allow Nether", isOn: $store.servers[index].config.mcAllowNether)
-        SettingToggleCard(title: store.isArabic ? "تفعيل عالم الإند (Allow End)" : "Allow End", isOn: $store.servers[index].config.mcAllowEnd)
-        SettingToggleCard(title: store.isArabic ? "تفعيل بلوكات الأوامر (Command Blocks)" : "Enable Command Blocks", isOn: $store.servers[index].config.mcEnableCommandBlock)
-        SettingToggleCard(title: store.isArabic ? "السماح بالطيران (Allow Flight)" : "Allow Flight", isOn: $store.servers[index].config.mcAllowFlight)
+        SettingToggleCard(title: store.isArabic ? "تفعيل عالم النذر (Nether)" : "Allow Nether", isOn: $draftConfig.mcAllowNether)
+        SettingToggleCard(title: store.isArabic ? "تفعيل بلوكات الأوامر (Command Blocks)" : "Command Blocks", isOn: $draftConfig.mcEnableCommandBlock)
     }
     
-    // --- قسم إعدادات FiveM (GTA V) ---
     @ViewBuilder
-    func fivemSettingsSection(index: Int) -> some View {
-        SettingGroupTitle(title: store.isArabic ? "2. إعدادات سيرفر FiveM (GTA V)" : "2. FiveM Server Settings")
-        
+    func fivemSettingsSection() -> some View {
+        SettingGroupTitle(title: store.isArabic ? "2. إعدادات FiveM (GTA V)" : "2. FiveM Settings")
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(store.isArabic ? "نظام OneSync" : "OneSync Mode").foregroundColor(.white)
-                Spacer()
-                Picker("", selection: $store.servers[index].config.fivemOneSync) {
-                    Text("Infinity (On)").tag("on")
-                    Text("Legacy").tag("legacy")
-                    Text("Off").tag("off")
-                }
-                .tint(.electricCyan)
-            }
-            Divider().background(Color.white.opacity(0.1))
             HStack {
                 Text(store.isArabic ? "إصدار اللعبة (Game Build)" : "Game Build").foregroundColor(.white)
                 Spacer()
-                Picker("", selection: $store.servers[index].config.fivemGameBuild) {
+                Picker("", selection: $draftConfig.fivemGameBuild) {
                     Text("3258 (Bottom Dollar)").tag("3258")
                     Text("3095 (Chop Shop)").tag("3095")
                     Text("2944 (Mercenaries)").tag("2944")
-                    Text("2802 (Drug Wars)").tag("2802")
                 }
                 .tint(.electricCyan)
             }
         }
-        .padding()
-        .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        
-        SettingToggleCard(title: store.isArabic ? "تفعيل المحادثة الصوتية (Voice Chat)" : "Enable Voice Chat", isOn: $store.servers[index].config.fivemVoiceChat)
-        SettingToggleCard(title: store.isArabic ? "السماح بـ ScriptHook (مودات اللاعب)" : "Allow Client ScriptHook", isOn: $store.servers[index].config.fivemScriptHook)
-        
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Cfx.re License Key").font(.caption.bold()).foregroundColor(.gray)
-            TextField("cfxk_...", text: $store.servers[index].config.fivemLicenseKey)
-                .padding(10).background(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 10))
-            
-            Text("Steam Web API Key").font(.caption.bold()).foregroundColor(.gray)
-            TextField("API Key...", text: $store.servers[index].config.fivemSteamWebApiKey)
-                .padding(10).background(Color.black.opacity(0.35)).clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .padding()
-        .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding().background(Color.cardBg).clipShape(RoundedRectangle(cornerRadius: 14))
+        SettingToggleCard(title: store.isArabic ? "تفعيل المحادثة الصوتية (Voice Chat)" : "Voice Chat", isOn: $draftConfig.fivemVoiceChat)
     }
     
-    // --- قسم إعدادات Rust ---
     @ViewBuilder
-    func rustSettingsSection(index: Int) -> some View {
-        SettingGroupTitle(title: store.isArabic ? "2. إعدادات عالم وموارد Rust" : "2. Rust Server Settings")
-        CustomRateSlider(title: store.isArabic ? "مضاعف الموارد (Gather Rate)" : "Gather Rate", value: $store.servers[index].config.rustGatherRate, range: 1...20)
-        CustomRateSlider(title: store.isArabic ? "نسبة تحلل المباني (Decay Scale)" : "Decay Scale", value: $store.servers[index].config.rustDecayScale, range: 0...2)
-        
-        VStack(spacing: 12) {
-            Stepper(value: $store.servers[index].config.rustWorldSize, in: 1000...6000, step: 500) {
-                HStack {
-                    Text(store.isArabic ? "حجم الخريطة (World Size)" : "World Size").foregroundColor(.white)
-                    Spacer()
-                    Text("\(store.servers[index].config.rustWorldSize)").foregroundColor(.electricCyan)
-                }
-            }
-            Divider().background(Color.white.opacity(0.1))
-            Stepper(value: $store.servers[index].config.rustMaxTeamSize, in: 1...16) {
-                HStack {
-                    Text(store.isArabic ? "أقصى حجم للفريق (Team Size)" : "Max Team Size").foregroundColor(.white)
-                    Spacer()
-                    Text("\(store.servers[index].config.rustMaxTeamSize)").foregroundColor(.electricCyan)
-                }
+    func rustSettingsSection() -> some View {
+        SettingGroupTitle(title: store.isArabic ? "2. إعدادات Rust" : "2. Rust Settings")
+        CustomRateSlider(title: store.isArabic ? "مضاعف الموارد (Gather Rate)" : "Gather Rate", value: $draftConfig.rustGatherRate, range: 1...20)
+        Stepper(value: $draftConfig.rustWorldSize, in: 1000...6000, step: 500) {
+            HStack {
+                Text(store.isArabic ? "حجم الخريطة" : "World Size").foregroundColor(.white)
+                Spacer()
+                Text("\(draftConfig.rustWorldSize)").foregroundColor(.electricCyan)
             }
         }
-        .padding()
-        .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding().background(Color.cardBg).clipShape(RoundedRectangle(cornerRadius: 14))
     }
     
-    // --- أقسام Palworld / CS2 / Terraria / Valheim ---
     @ViewBuilder
-    func palworldSettingsSection(index: Int) -> some View {
+    func palworldSettingsSection() -> some View {
         SettingGroupTitle(title: store.isArabic ? "2. إعدادات Palworld" : "2. Palworld Settings")
-        CustomRateSlider(title: store.isArabic ? "نسبة صيد الـ Pals (Capture Rate)" : "Pal Capture Rate", value: $store.servers[index].config.palCaptureRate, range: 0.5...10)
-        CustomRateSlider(title: store.isArabic ? "معدل ظهور الـ Pals (Spawn Rate)" : "Pal Spawn Rate", value: $store.servers[index].config.palSpawnRate, range: 0.5...5)
-        CustomRateSlider(title: store.isArabic ? "مضاعف الخبرة (XP)" : "XP Rate", value: $store.servers[index].config.xpMultiplier, range: 1...20)
+        CustomRateSlider(title: store.isArabic ? "نسبة صيد الـ Pals" : "Capture Rate", value: $draftConfig.palCaptureRate, range: 0.5...10)
     }
     
     @ViewBuilder
-    func cs2SettingsSection(index: Int) -> some View {
-        SettingGroupTitle(title: store.isArabic ? "2. إعدادات Counter-Strike 2" : "2. CS2 Settings")
-        VStack(spacing: 12) {
+    func cs2SettingsSection() -> some View {
+        SettingGroupTitle(title: store.isArabic ? "2. إعدادات CS2" : "2. CS2 Settings")
+        Stepper(value: $draftConfig.cs2MaxRounds, in: 10...30, step: 2) {
             HStack {
-                Text(store.isArabic ? "نمط اللعب" : "Game Mode").foregroundColor(.white)
+                Text(store.isArabic ? "عدد الجولات" : "Max Rounds").foregroundColor(.white)
                 Spacer()
-                Picker("", selection: $store.servers[index].config.cs2GameMode) {
-                    Text("Competitive").tag("Competitive")
-                    Text("Premier").tag("Premier")
-                    Text("Deathmatch").tag("Deathmatch")
-                    Text("Casual").tag("Casual")
-                }
-                .tint(.electricCyan)
-            }
-            Divider().background(Color.white.opacity(0.1))
-            Stepper(value: $store.servers[index].config.cs2MaxRounds, in: 10...30, step: 2) {
-                HStack {
-                    Text(store.isArabic ? "عدد الجولات (Max Rounds)" : "Max Rounds").foregroundColor(.white)
-                    Spacer()
-                    Text("\(store.servers[index].config.cs2MaxRounds)").foregroundColor(.electricCyan)
-                }
+                Text("\(draftConfig.cs2MaxRounds)").foregroundColor(.electricCyan)
             }
         }
-        .padding()
-        .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding().background(Color.cardBg).clipShape(RoundedRectangle(cornerRadius: 14))
     }
     
     @ViewBuilder
-    func terrariaSettingsSection(index: Int) -> some View {
-        SettingGroupTitle(title: store.isArabic ? "2. إعدادات عالم Terraria" : "2. Terraria World")
-        VStack(spacing: 12) {
-            HStack {
-                Text(store.isArabic ? "حجم العالم" : "World Size").foregroundColor(.white)
-                Spacer()
-                Picker("", selection: $store.servers[index].config.terrariaWorldSize) {
-                    Text("Small").tag("Small")
-                    Text("Medium").tag("Medium")
-                    Text("Large").tag("Large")
-                }
-                .tint(.electricCyan)
-            }
-            Divider().background(Color.white.opacity(0.1))
-            HStack {
-                Text(store.isArabic ? "الصعوبة" : "Difficulty").foregroundColor(.white)
-                Spacer()
-                Picker("", selection: $store.servers[index].config.terrariaDifficulty) {
-                    Text("Classic").tag("Classic")
-                    Text("Expert").tag("Expert")
-                    Text("Master").tag("Master")
-                    Text("Journey").tag("Journey")
-                }
-                .tint(.electricCyan)
-            }
+    func terrariaSettingsSection() -> some View {
+        SettingGroupTitle(title: store.isArabic ? "2. إعدادات Terraria" : "2. Terraria Settings")
+        Picker("Difficulty", selection: $draftConfig.terrariaDifficulty) {
+            Text("Classic").tag("Classic")
+            Text("Expert").tag("Expert")
+            Text("Master").tag("Master")
         }
-        .padding()
-        .background(Color.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding().background(Color.cardBg).clipShape(RoundedRectangle(cornerRadius: 14))
     }
     
     @ViewBuilder
-    func valheimSettingsSection(index: Int) -> some View {
-        SettingGroupTitle(title: store.isArabic ? "2. إعدادات عالم Valheim" : "2. Valheim Settings")
-        CustomRateSlider(title: store.isArabic ? "مضاعف الموارد (Resource Rate)" : "Resource Rate", value: $store.servers[index].config.harvestMultiplier, range: 1...5)
-        SettingToggleCard(title: store.isArabic ? "السماح بنقل المعادن عبر البوابات" : "Allow Portal Metals", isOn: $store.servers[index].config.allowCaveFlyers)
+    func valheimSettingsSection() -> some View {
+        SettingGroupTitle(title: store.isArabic ? "2. إعدادات Valheim" : "2. Valheim Settings")
+        CustomRateSlider(title: store.isArabic ? "مضاعف الموارد" : "Resource Rate", value: $draftConfig.harvestMultiplier, range: 1...5)
     }
     
     // ---------------------------------------------------------
-    // متجر المودات والبلوقنات بالصور الرسمية لكل لعبة
+    // متجر المودات الشامل (أكثر من 35 موداً لأرك + الألعاب الأخرى)
     // ---------------------------------------------------------
-    func modsAndStoreView(index: Int, game: GameType) -> some View {
+    func modsAndStoreView(game: GameType) -> some View {
+        let categories = ["الكل", "تخزين", "موارد", "أدوات", "تربية", "أتمتة", "بناء", "ديناصورات", "تحدي", "إدارة", "أسلحة"]
         let gameMods = store.modsCatalog.filter { $0.game == game }
         let filteredCatalog = gameMods.filter { item in
-            modSearchText.isEmpty || item.name.localizedCaseInsensitiveContains(modSearchText) || item.arabicDescription.contains(modSearchText)
+            let matchesSearch = modSearchText.isEmpty || item.name.localizedCaseInsensitiveContains(modSearchText) || item.arabicDescription.contains(modSearchText)
+            let matchesCat = selectedModCategory == "الكل" || item.category.contains(selectedModCategory)
+            return matchesSearch && matchesCat
         }
         
         return ScrollView {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(store.isArabic ? "المودات المثبتة حالياً (\(store.servers[index].config.mods.count))" : "Installed Mods (\(store.servers[index].config.mods.count))")
+                    Text(store.isArabic ? "المودات المثبتة (\(draftConfig.mods.count))" : "Installed Mods (\(draftConfig.mods.count))")
                         .font(.headline)
                         .foregroundColor(.white)
                     
-                    ForEach(store.servers[index].config.mods.indices, id: \.self) { mIdx in
-                        let mod = store.servers[index].config.mods[mIdx]
+                    ForEach(draftConfig.mods.indices, id: \.self) { mIdx in
+                        let mod = draftConfig.mods[mIdx]
                         HStack(spacing: 12) {
                             GameOfficialImage(urlString: mod.imageURL, fallbackIcon: "puzzlepiece.extension.fill")
                                 .frame(width: 46, height: 46)
@@ -533,13 +518,11 @@ struct ServerDetailView: View {
                             }
                             Spacer()
                             if store.canMods {
-                                Toggle("", isOn: $store.servers[index].config.mods[mIdx].isEnabled)
+                                Toggle("", isOn: $draftConfig.mods[mIdx].isEnabled)
                                     .labelsHidden()
                                     .tint(.electricCyan)
                                 Button {
-                                    let removedName = mod.name
-                                    store.servers[index].config.mods.remove(at: mIdx)
-                                    store.applyFullConfig(serverId: serverId, config: store.servers[index].config, customLogText: "حذف مود: \(removedName)")
+                                    draftConfig.mods.remove(at: mIdx)
                                 } label: {
                                     Image(systemName: "trash").foregroundColor(.red)
                                 }
@@ -553,7 +536,7 @@ struct ServerDetailView: View {
                 
                 if store.canMods {
                     VStack(spacing: 10) {
-                        Text(store.isArabic ? "إضافة أي مود برقم المعرّف (Mod ID)" : "Add Custom Mod by ID")
+                        Text(store.isArabic ? "إضافة أي مود برقم المعرّف (CurseForge Mod ID)" : "Add Custom Mod by ID")
                             .font(.subheadline.bold())
                             .foregroundColor(.electricCyan)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -574,12 +557,11 @@ struct ServerDetailView: View {
                                 arabicDescription: store.isArabic ? "مود مضاف يدوياً برقم المعرّف \(newModId)." : "Manually installed mod.",
                                 imageURL: game.officialImageURL
                             )
-                            store.servers[index].config.mods.append(mod)
-                            store.applyFullConfig(serverId: serverId, config: store.servers[index].config, customLogText: "إضافة مود يدوي: \(mName)")
+                            draftConfig.mods.append(mod)
                             newModId = ""
                             newModName = ""
                         } label: {
-                            Label(store.isArabic ? "تثبيت وحفظ المود" : "Install Mod", systemImage: "plus.circle.fill")
+                            Label(store.isArabic ? "إضافة للقائمة (ثم اضغط حفظ)" : "Add to List", systemImage: "plus.circle.fill")
                                 .font(.subheadline.bold())
                                 .frame(maxWidth: .infinity)
                                 .padding(10)
@@ -593,19 +575,39 @@ struct ServerDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 
-                if !filteredCatalog.isEmpty {
+                if !gameMods.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(store.isArabic ? "متجر مودات \(game.shortBadge) (بالصور الأصلية والوصف العربي)" : "\(game.shortBadge) Mods Store")
+                        Text(store.isArabic ? "متجر مودات \(game.shortBadge) الشامل (\(gameMods.count) مود)" : "\(game.shortBadge) Mods Store")
                             .font(.headline)
                             .foregroundColor(.white)
                         
-                        TextField(store.isArabic ? "ابحث في المتجر..." : "Search mods...", text: $modSearchText)
+                        TextField(store.isArabic ? "ابحث في المتجر بالاسم أو الوصف..." : "Search mods...", text: $modSearchText)
                             .padding(10)
                             .background(Color.cardBg)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         
+                        if game == .arkAscended {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(categories, id: \.self) { cat in
+                                        Button {
+                                            selectedModCategory = cat
+                                        } label: {
+                                            Text(cat)
+                                                .font(.caption.bold())
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 6)
+                                                .background(selectedModCategory == cat ? Color.electricCyan : Color.cardBg)
+                                                .foregroundColor(selectedModCategory == cat ? .black : .white)
+                                                .clipShape(Capsule())
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
                         ForEach(filteredCatalog) { item in
-                            let alreadyInstalled = store.servers[index].config.mods.contains(where: { $0.modId == item.id })
+                            let alreadyInstalled = draftConfig.mods.contains(where: { $0.modId == item.id })
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack(spacing: 12) {
                                     GameOfficialImage(urlString: item.imageURL, fallbackIcon: "puzzlepiece.fill")
@@ -636,11 +638,10 @@ struct ServerDetailView: View {
                                         Button {
                                             if !alreadyInstalled {
                                                 let mod = GameMod(modId: item.id, name: item.name, arabicDescription: item.arabicDescription, imageURL: item.imageURL)
-                                                store.servers[index].config.mods.append(mod)
-                                                store.applyFullConfig(serverId: serverId, config: store.servers[index].config, customLogText: "تثبيت مود: \(item.name)")
+                                                draftConfig.mods.append(mod)
                                             }
                                         } label: {
-                                            Text(alreadyInstalled ? (store.isArabic ? "مثبّت ✓" : "Installed") : (store.isArabic ? "تثبيت +" : "Install"))
+                                            Text(alreadyInstalled ? (store.isArabic ? "مضاف ✓" : "Added") : (store.isArabic ? "إضافة +" : "Add +"))
                                                 .font(.caption.bold())
                                                 .padding(.horizontal, 12)
                                                 .padding(.vertical, 7)
@@ -663,6 +664,7 @@ struct ServerDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                         }
                     }
+                    .padding(.bottom, 75)
                 }
             }
             .padding()
@@ -708,6 +710,74 @@ struct ServerDetailView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 10)
             }
+        }
+    }
+}
+
+// ---------------------------------------------------------
+// نافذة مراجعة التعديلات قبل الحفظ وتأكيد إعادة التشغيل بعد 20 ثانية
+// ---------------------------------------------------------
+struct ReviewChangesSheet: View {
+    let serverName: String
+    let changes: [String]
+    let isArabic: Bool
+    let onConfirmSave: () -> Void
+    let onDiscard: () -> Void
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                VStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.trianglebadge.exclamationmark")
+                        .font(.largeTitle)
+                        .foregroundColor(.electricCyan)
+                    Text(isArabic ? "مراجعة التعديلات قبل الحفظ" : "Review Changes Before Saving")
+                        .font(.headline)
+                    Text(isArabic ? "سيتم إرسال تنبيه للاعبين داخل (\(serverName)) بأن السيرفر سيعاد تشغيله بعد 20 ثانية." : "Players will be notified of a 20-second restart countdown.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .padding(.top)
+                
+                List {
+                    Section(isArabic ? "التعديلات التي قمت بها (\(changes.count))" : "Your Changes (\(changes.count))") {
+                        ForEach(changes, id: \.self) { item in
+                            HStack {
+                                Image(systemName: "arrow.left.arrow.right.circle.fill")
+                                    .foregroundColor(.electricCyan)
+                                Text(item)
+                                    .font(.subheadline)
+                            }
+                        }
+                    }
+                }
+                
+                VStack(spacing: 10) {
+                    Button {
+                        onConfirmSave()
+                    } label: {
+                        Text(isArabic ? "تأكيد الحفظ وإرسال تنبيه 20 ثانية" : "Confirm Save & 20s Restart Notice")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(LinearGradient(colors: [.electricCyan, .neonViolet], startPoint: .leading, endPoint: .trailing))
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    
+                    Button(role: .destructive) {
+                        onDiscard()
+                    } label: {
+                        Text(isArabic ? "تراجع عن التعديلات" : "Discard Changes")
+                            .font(.subheadline)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle(isArabic ? "تأكيد الحفظ" : "Confirm Save")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
