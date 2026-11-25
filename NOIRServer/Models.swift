@@ -22,7 +22,7 @@ struct ActivityLogItem: Identifiable, Codable {
     let serverName: String
     let actionDescription: String
     let timestamp: Date
-    let category: String // "config", "mod", "power", "create"
+    let category: String
 }
 
 enum ServerStatus: String, Codable {
@@ -45,40 +45,49 @@ enum GameType: String, CaseIterable, Identifiable, Codable {
     
     var shortBadge: String {
         switch self {
-        case .arkAscended: return "ARK"
-        case .minecraft: return "MC"
+        case .arkAscended: return "ARK ASA"
+        case .minecraft: return "MINECRAFT"
         case .rust: return "RUST"
-        case .palworld: return "PAL"
-        case .valheim: return "VAL"
+        case .palworld: return "PALWORLD"
+        case .valheim: return "VALHEIM"
         case .cs2: return "CS2"
-        case .fivem: return "GTA"
-        case .terraria: return "TER"
+        case .fivem: return "FIVEM"
+        case .terraria: return "TERRARIA"
         }
     }
     
-    var icon: String {
+    // روابط الصور الرسمية الأصلية للألعاب
+    var officialImageURL: String {
+        switch self {
+        case .arkAscended:
+            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2399830/header.jpg"
+        case .minecraft:
+            return "https://www.minecraft.net/content/dam/games/minecraft/key-art/Vanilla-PMP_Collection-Carousel-0_Buzzy-Bees_1280x768.jpg"
+        case .rust:
+            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/252490/header.jpg"
+        case .palworld:
+            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1623730/header.jpg"
+        case .valheim:
+            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/892970/header.jpg"
+        case .cs2:
+            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/header.jpg"
+        case .fivem:
+            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/271590/header.jpg"
+        case .terraria:
+            return "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/105600/header.jpg"
+        }
+    }
+    
+    var fallbackIcon: String {
         switch self {
         case .arkAscended: return "lizard.fill"
-        case .minecraft: return "cube.transparent.fill"
-        case .rust: return "flame.circle.fill"
-        case .palworld: return "pawprint.circle.fill"
-        case .valheim: return "shield.lefthalf.filled"
+        case .minecraft: return "cube.fill"
+        case .rust: return "flame.fill"
+        case .palworld: return "pawprint.fill"
+        case .valheim: return "shield.fill"
         case .cs2: return "scope"
-        case .fivem: return "car.side.fill"
-        case .terraria: return "leaf.circle.fill"
-        }
-    }
-    
-    var themeColors: [Color] {
-        switch self {
-        case .arkAscended: return [Color(red: 0.0, green: 0.82, blue: 0.95), Color(red: 0.05, green: 0.45, blue: 0.85)]
-        case .minecraft: return [Color(red: 0.16, green: 0.82, blue: 0.48), Color(red: 0.05, green: 0.55, blue: 0.35)]
-        case .rust: return [Color(red: 0.96, green: 0.42, blue: 0.22), Color(red: 0.78, green: 0.18, blue: 0.18)]
-        case .palworld: return [Color(red: 0.35, green: 0.65, blue: 1.0), Color(red: 0.45, green: 0.30, blue: 0.95)]
-        case .valheim: return [Color(red: 0.20, green: 0.75, blue: 0.72), Color(red: 0.12, green: 0.42, blue: 0.55)]
-        case .cs2: return [Color(red: 0.95, green: 0.62, blue: 0.18), Color(red: 0.82, green: 0.35, blue: 0.12)]
-        case .fivem: return [Color(red: 0.65, green: 0.35, blue: 0.98), Color(red: 0.35, green: 0.15, blue: 0.75)]
-        case .terraria: return [Color(red: 0.28, green: 0.85, blue: 0.55), Color(red: 0.18, green: 0.60, blue: 0.75)]
+        case .fivem: return "car.fill"
+        case .terraria: return "leaf.fill"
         }
     }
     
@@ -106,17 +115,25 @@ enum GameType: String, CaseIterable, Identifiable, Codable {
 }
 
 struct FullServerConfig: Codable {
+    // --- إعدادات مشتركة لجميع السيرفرات ---
+    var maxPlayers: Int = 20
+    var crossplayEnabled: Bool = true        // اللعب المشترك (PC + Console / Bedrock)
+    var pvpEnabled: Bool = true
+    var serverPassword: String = ""
+    var adminPassword: String = "noir123"
+    var motdMessage: String = "مرحباً بكم في سيرفر NOIR!"
+    var autoSaveMinutes: Int = 15
+    var mapName: String = "TheIsland_WP"
+    
+    // --- إعدادات ARK: Survival Ascended ---
     var harvestMultiplier: Double = 5.0
     var tamingSpeed: Double = 10.0
     var xpMultiplier: Double = 3.0
     var lootQuality: Double = 2.0
     var stackSizeMultiplier: Double = 5.0
-    
     var eggHatchSpeed: Double = 15.0
     var babyMatureSpeed: Double = 20.0
-    var matingInterval: Double = 0.2
     var babyImprintMultiplier: Double = 2.0
-    
     var playerWeight: Double = 5.0
     var playerHealth: Double = 2.0
     var playerStamina: Double = 3.0
@@ -124,20 +141,50 @@ struct FullServerConfig: Codable {
     var dinoWeight: Double = 5.0
     var dinoDamage: Double = 1.5
     var wildDinoMaxLevel: Int = 150
-    
     var dayTimeSpeed: Double = 1.0
     var nightTimeSpeed: Double = 2.0
-    var playerFoodDrain: Double = 0.5
-    var playerWaterDrain: Double = 0.5
-    var maxPlayers: Int = 20
-    var pvpEnabled: Bool = true
     var allowCaveFlyers: Bool = true
     var showMapPlayerLocation: Bool = true
     var allowThirdPerson: Bool = true
     var disableStructureDecay: Bool = true
-    var serverPassword: String = ""
-    var adminPassword: String = "noir123"
-    var motdMessage: String = "مرحباً بكم في سيرفر NOIR!"
+    var allowBattlEye: Bool = true
+    
+    // --- إعدادات Minecraft ---
+    var mcGameMode: String = "survival"      // survival, creative, adventure, spectator
+    var mcDifficulty: String = "normal"      // peaceful, easy, normal, hard
+    var mcOnlineMode: Bool = false           // false = يسمح بالمكركة والأصلية
+    var mcAllowNether: Bool = true
+    var mcAllowEnd: Bool = true
+    var mcEnableCommandBlock: Bool = true
+    var mcViewDistance: Int = 12
+    var mcSimulationDistance: Int = 10
+    var mcSpawnProtection: Int = 16
+    var mcAllowFlight: Bool = true
+    
+    // --- إعدادات FiveM (GTA V) ---
+    var fivemOneSync: String = "on"          // on, legacy, off
+    var fivemGameBuild: String = "3258"      // 3258, 3095, 2944, 2802
+    var fivemVoiceChat: Bool = true
+    var fivemScriptHook: Bool = false
+    var fivemSteamWebApiKey: String = ""
+    var fivemLicenseKey: String = ""
+    
+    // --- إعدادات Rust ---
+    var rustWorldSize: Int = 3500
+    var rustWorldSeed: Int = 133742
+    var rustGatherRate: Double = 3.0
+    var rustDecayScale: Double = 0.5
+    var rustMaxTeamSize: Int = 4
+    var rustWipeSchedule: String = "Weekly"
+    
+    // --- إعدادات Palworld / Valheim / CS2 / Terraria ---
+    var palCaptureRate: Double = 2.0
+    var palSpawnRate: Double = 1.5
+    var palDeathPenalty: String = "Item"     // None, Item, ItemAndEquipment, All
+    var cs2GameMode: String = "Competitive"  // Competitive, Premier, Deathmatch, Casual
+    var cs2MaxRounds: Int = 24
+    var terrariaWorldSize: String = "Large"  // Small, Medium, Large
+    var terrariaDifficulty: String = "Expert"// Classic, Expert, Master, Journey
     
     var mods: [GameMod] = []
 }
@@ -147,16 +194,16 @@ struct GameMod: Identifiable, Codable {
     let modId: String
     var name: String
     var arabicDescription: String
-    var iconName: String = "puzzlepiece.extension.fill"
+    var imageURL: String
     var isEnabled: Bool = true
 }
 
 struct StoreModItem: Identifiable {
     let id: String
+    let game: GameType
     let name: String
     let category: String
-    let iconName: String
-    let bannerColors: [Color]
+    let imageURL: String
     let arabicDescription: String
     let englishDescription: String
 }
