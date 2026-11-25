@@ -31,6 +31,24 @@ enum ServerStatus: String, Codable {
     case starting = "starting"
 }
 
+enum ModSortOption: String, CaseIterable, Identifiable {
+    case downloads = "downloads"
+    case updated = "updated"
+    case relevance = "relevance"
+    case follows = "follows"
+    
+    var id: String { rawValue }
+    
+    func title(isArabic: Bool) -> String {
+        switch self {
+        case .downloads: return isArabic ? "الأكثر تنزيلاً 🔥" : "Most Downloads"
+        case .updated: return isArabic ? "الأحدث تحديثاً 🆕" : "Recently Updated"
+        case .relevance: return isArabic ? "الأكثر تطابقاً 🎯" : "Most Relevant"
+        case .follows: return isArabic ? "الأعلى تقييماً ⭐" : "Top Rated"
+        }
+    }
+}
+
 enum GameType: String, CaseIterable, Identifiable, Codable {
     case arkAscended = "ARK: Survival Ascended"
     case minecraft = "Minecraft Java/Bedrock"
@@ -182,7 +200,6 @@ struct FullServerConfig: Codable, Equatable {
     
     var mods: [GameMod] = []
     
-    // مقارنة التعديلات لإظهارها قبل الحفظ
     func diffSummary(comparedTo old: FullServerConfig, isArabic: Bool) -> [String] {
         var changes: [String] = []
         if maxPlayers != old.maxPlayers {
@@ -276,8 +293,19 @@ struct StoreModItem: Identifiable {
     let name: String
     let category: String
     let imageURL: String
+    let screenshots: [String]
+    let downloadsCount: Int
     let arabicDescription: String
     let englishDescription: String
+    
+    var formattedDownloads: String {
+        if downloadsCount >= 1_000_000 {
+            return String(format: "%.1fM", Double(downloadsCount) / 1_000_000.0)
+        } else if downloadsCount >= 1_000 {
+            return String(format: "%.0fK", Double(downloadsCount) / 1_000.0)
+        }
+        return "\(downloadsCount)"
+    }
 }
 
 struct GameServer: Identifiable, Codable {
