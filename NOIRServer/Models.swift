@@ -1,5 +1,20 @@
 import Foundation
 
+enum UserRole: String, Codable {
+    case owner = "owner"
+    case friend = "friend"
+}
+
+struct AccessCode: Identifiable, Codable {
+    let id: String
+    var friendName: String
+    var code: String
+    var canPowerControl: Bool   // تشغيل / إيقاف / ريستارت
+    var canEditSettings: Bool   // تعديل إعدادات السيرفر
+    var canManageMods: Bool     // إضافة وحذف المودات
+    var canUseConsole: Bool     // كتابة أوامر الكونسول
+}
+
 enum ServerStatus: String, Codable {
     case running = "running"
     case offline = "offline"
@@ -52,28 +67,46 @@ enum GameType: String, CaseIterable, Identifiable, Codable {
         case .terraria: return 7778
         }
     }
-    
-    var modSourceLabel: String {
-        switch self {
-        case .arkAscended: return "CurseForge Mod ID"
-        case .minecraft: return "Modrinth / Plugin ID"
-        case .rust: return "Oxide / uMod Plugin"
-        case .palworld, .valheim, .cs2: return "Steam Workshop / Mod ID"
-        case .fivem: return "Resource Folder Name"
-        case .terraria: return "tModLoader ID"
-        }
-    }
 }
 
-struct NitradoStyleConfig: Codable {
-    var primaryRate: Double = 5.0
-    var secondaryRate: Double = 10.0
+struct FullServerConfig: Codable {
+    // 1. المعدلات الأساسية
+    var harvestMultiplier: Double = 5.0
+    var tamingSpeed: Double = 10.0
     var xpMultiplier: Double = 3.0
-    var thirdRate: Double = 15.0
-    var weightOrSlots: Double = 5.0
+    var lootQuality: Double = 2.0
+    var stackSizeMultiplier: Double = 5.0
+    
+    // 2. التفريخ والتربية (Breeding)
+    var eggHatchSpeed: Double = 15.0
+    var babyMatureSpeed: Double = 20.0
+    var matingInterval: Double = 0.2
+    var babyImprintMultiplier: Double = 2.0
+    
+    // 3. إحصائيات اللاعب والديناصورات
+    var playerWeight: Double = 5.0
+    var playerHealth: Double = 2.0
+    var playerStamina: Double = 3.0
+    var playerSpeed: Double = 1.5
+    var dinoWeight: Double = 5.0
+    var dinoDamage: Double = 1.5
+    var wildDinoMaxLevel: Int = 150
+    
+    // 4. قوانين العالم والبيئة
+    var dayTimeSpeed: Double = 1.0
+    var nightTimeSpeed: Double = 2.0
+    var playerFoodDrain: Double = 0.5
+    var playerWaterDrain: Double = 0.5
     var maxPlayers: Int = 20
     var pvpEnabled: Bool = true
+    var allowCaveFlyers: Bool = true
+    var showMapPlayerLocation: Bool = true
+    var allowThirdPerson: Bool = true
+    var disableStructureDecay: Bool = true
     var serverPassword: String = ""
+    var adminPassword: String = "noir123"
+    var motdMessage: String = "مرحباً بكم في سيرفر NOIR!"
+    
     var mods: [GameMod] = []
 }
 
@@ -81,7 +114,16 @@ struct GameMod: Identifiable, Codable {
     var id: String { modId }
     let modId: String
     var name: String
+    var arabicDescription: String
     var isEnabled: Bool = true
+}
+
+struct StoreModItem: Identifiable {
+    let id: String
+    let name: String
+    let category: String
+    let arabicDescription: String
+    let englishDescription: String
 }
 
 struct GameServer: Identifiable, Codable {
@@ -95,6 +137,6 @@ struct GameServer: Identifiable, Codable {
     var ramUsedGB: Double
     var ramTotalGB: Double
     var playersOnline: Int
-    var config: NitradoStyleConfig
+    var config: FullServerConfig
     var consoleLogs: [String]
 }
